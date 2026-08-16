@@ -1,0 +1,142 @@
+/* ===================================================================
+   App Layout
+   =================================================================== */
+
+.app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* --- Header: ruled line, like a form header --- */
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--sp-4) var(--sp-6);
+  background: var(--paper-white);
+  border-bottom: 2px solid var(--ink);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.app-header__left {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+}
+
+.app-header__back {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  font-size: 1.2rem;
+  color: var(--ink);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--paper);
+  transition: background 0.15s;
+}
+
+.app-header__back:hover {
+  background: var(--border-light);
+}
+
+.app-header__title {
+  font-family: var(--font-body);
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  text-transform: uppercase;
+}
+
+.app-header__right {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.app-header__meta {
+  font-family: var(--font-data);
+  font-size: 0.75rem;
+  color: var(--steel);
+  letter-spacing: 0.02em;
+}
+
+.app-header__separator {
+  color: var(--border);
+  font-size: 0.75rem;
+}
+
+/* --- Main content area --- */
+.app-main {
+  flex: 1;
+  padding: var(--sp-6);
+  max-width: 1200px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+/* --- Loading / Error / Empty states --- */
+.app-state {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--paper);
+}
+
+.app-state__content {
+  text-align: center;
+}
+
+.app-state__spinner {
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--border);
+  border-top-color: var(--ink);
+  border-radius: 50%;
+  margin: 0 auto var(--sp-4);
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.app-state__label {
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  color: var(--slate);
+  font-weight: 500;
+}
+
+.app-state__label--error {
+  color: var(--urgent);
+}
+
+.app-state__sublabel {
+  font-family: var(--font-data);
+  font-size: 0.8rem;
+  color: var(--steel);
+  margin-top: var(--sp-2);
+}
+
+/* --- Responsive --- */
+@media (max-width: 768px) {
+  .app-header {
+    padding: var(--sp-3) var(--sp-4);
+  }
+
+  .app-header__title {
+    font-size: 0.95rem;
+  }
+
+  .app-main {
+    padding: var(--sp-4);
+  }
+}

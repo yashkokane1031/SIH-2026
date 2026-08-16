@@ -1,0 +1,105 @@
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
+
+/* ===================================================================
+   DESIGN TOKENS — Clinical Lab Report Aesthetic
+   =================================================================== */
+
+:root {
+  /* --- Color Palette --- */
+  --ink:            #0F172A;    /* Primary text, headers */
+  --ink-light:      #1E293B;    /* Slightly lighter ink */
+  --slate:          #475569;    /* Secondary text, metadata */
+  --steel:          #64748B;    /* Tier 2 routine, subtle elements */
+  --border:         #CBD5E1;    /* Borders, ruled lines */
+  --border-light:   #E2E8F0;    /* Subtle dividers */
+  --paper:          #F1F5F9;    /* Page background */
+  --paper-white:    #FFFFFF;    /* Card/panel background */
+
+  /* Tier accent colors */
+  --urgent:         #B91C1C;    /* Tier 1 — clinical red */
+  --urgent-bg:      #FEF2F2;    /* Tier 1 background tint */
+  --urgent-border:  #FECACA;
+  --routine:        #64748B;    /* Tier 2 — muted steel */
+  --routine-bg:     #F8FAFC;
+  --routine-border: #E2E8F0;
+  --uncertain:      #B45309;    /* Tier 3 — deep amber */
+  --uncertain-bg:   #FFFBEB;
+  --uncertain-border: #FDE68A;
+
+  /* Functional */
+  --focus:          #2563EB;    /* Keyboard focus ring */
+  --confirm:        #166534;    /* Confirm action */
+  --confirm-bg:     #F0FDF4;
+  --override:       #9A3412;    /* Override action */
+  --override-bg:    #FFF7ED;
+
+  /* Heatmap sequential colormap */
+  --heatmap-zero:   #1E293B;
+  --heatmap-low:    #1D4ED8;
+  --heatmap-mid:    #F59E0B;
+  --heatmap-high:   #DC2626;
+
+  /* --- Typography --- */
+  --font-data:      'IBM Plex Mono', 'Consolas', monospace;
+  --font-body:      'IBM Plex Sans', -apple-system, sans-serif;
+
+  /* --- Spacing --- */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+  --sp-6: 24px;
+  --sp-8: 32px;
+  --sp-10: 40px;
+  --sp-12: 48px;
+
+  /* --- Borders --- */
+  --radius-sm: 3px;
+  --radius-md: 6px;
+}
+
+/* ===================================================================
+   RESET & BASE
+   =================================================================== */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 15px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: var(--font-body);
+  color: var(--ink);
+  background-color: var(--paper);
+  line-height: 1.5;
+}
+
+/* Keyboard focus — visible ring on tab, hidden on click */
+*:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+*:focus:not(:focus-visible) {
+  outline: none;
+}
+
+button {
+  font-family: var(--font-body);
+  cursor: pointer;
+  border: none;
+  background: none;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}

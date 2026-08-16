@@ -1,0 +1,220 @@
+/* ===================================================================
+   TriageQueue — Summary cards + data table
+   =================================================================== */
+
+.triage-queue {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-6);
+}
+
+/* --- Summary cards row --- */
+.triage-queue__summary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--sp-4);
+}
+
+.summary-card {
+  background: var(--paper-white);
+  border: 1px solid var(--border-light);
+  border-left: 4px solid var(--border);
+  padding: var(--sp-4) var(--sp-5);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.summary-card--urgent  { border-left-color: var(--urgent); }
+.summary-card--uncertain { border-left-color: var(--uncertain); }
+.summary-card--routine { border-left-color: var(--steel); }
+
+.summary-card__count {
+  font-family: var(--font-data);
+  font-size: 2rem;
+  font-weight: 600;
+  line-height: 1.1;
+  color: var(--ink);
+}
+
+.summary-card--urgent .summary-card__count  { color: var(--urgent); }
+.summary-card--uncertain .summary-card__count { color: var(--uncertain); }
+
+.summary-card__label {
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--ink);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.summary-card__tier {
+  font-family: var(--font-data);
+  font-size: 0.7rem;
+  color: var(--steel);
+  letter-spacing: 0.02em;
+}
+
+/* --- Table wrapper for horizontal scroll --- */
+.triage-queue__table-wrapper {
+  overflow-x: auto;
+  background: var(--paper-white);
+  border: 1px solid var(--border);
+}
+
+/* --- Table --- */
+.triage-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.triage-table__th {
+  font-family: var(--font-body);
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--slate);
+  text-align: left;
+  padding: var(--sp-3) var(--sp-4);
+  border-bottom: 2px solid var(--ink);
+  background: var(--paper);
+  white-space: nowrap;
+  position: sticky;
+  top: 0;
+}
+
+.triage-table__th--num {
+  text-align: right;
+}
+
+/* --- Rows --- */
+.triage-table__row {
+  cursor: pointer;
+  border-bottom: 1px solid var(--border-light);
+  transition: background 0.1s;
+}
+
+.triage-table__row:hover {
+  background: var(--paper);
+}
+
+.triage-table__row--urgent {
+  border-left: 3px solid var(--urgent);
+}
+
+.triage-table__row--uncertain {
+  border-left: 3px solid var(--uncertain);
+}
+
+.triage-table__row--routine {
+  border-left: 3px solid transparent;
+}
+
+/* --- Cells --- */
+.triage-table__td {
+  padding: var(--sp-3) var(--sp-4);
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.triage-table__td--id {
+  font-family: var(--font-data);
+  font-weight: 500;
+  color: var(--ink);
+  letter-spacing: 0.01em;
+}
+
+.triage-table__td--num {
+  font-family: var(--font-data);
+  text-align: right;
+  color: var(--ink-light);
+}
+
+.triage-table__td--status {
+  color: var(--slate);
+  font-size: 0.8rem;
+  white-space: normal;
+  max-width: 240px;
+}
+
+/* --- Tier badges --- */
+.tier-badge {
+  display: inline-block;
+  font-family: var(--font-data);
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 3px 10px;
+  border-radius: 2px;
+}
+
+.tier-badge--urgent {
+  color: var(--urgent);
+  background: var(--urgent-bg);
+  border: 1px solid var(--urgent-border);
+}
+
+.tier-badge--uncertain {
+  color: var(--uncertain);
+  background: var(--uncertain-bg);
+  border: 1px solid var(--uncertain-border);
+}
+
+.tier-badge--routine {
+  color: var(--routine);
+  background: var(--routine-bg);
+  border: 1px solid var(--routine-border);
+}
+
+/* --- Action tags --- */
+.action-tag {
+  font-family: var(--font-data);
+  font-size: 0.7rem;
+  letter-spacing: 0.02em;
+  padding: 2px 8px;
+  border-radius: 2px;
+}
+
+.action-tag--pending {
+  color: var(--steel);
+  background: var(--paper);
+  border: 1px solid var(--border-light);
+}
+
+.action-tag--confirmed {
+  color: var(--confirm);
+  background: var(--confirm-bg);
+  border: 1px solid #BBF7D0;
+}
+
+.action-tag--overridden {
+  color: var(--override);
+  background: var(--override-bg);
+  border: 1px solid #FED7AA;
+}
+
+/* --- Responsive --- */
+@media (max-width: 768px) {
+  .triage-queue__summary {
+    grid-template-columns: 1fr;
+  }
+
+  .triage-table__td--status {
+    display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .triage-table {
+    font-size: 0.78rem;
+  }
+
+  .triage-table__td,
+  .triage-table__th {
+    padding: var(--sp-2) var(--sp-3);
+  }
+}
