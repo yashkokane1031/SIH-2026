@@ -7,6 +7,14 @@
   <code>SIH 2026 Prototype</code>&nbsp;&nbsp;|&nbsp;&nbsp;<code>PyTorch</code>&nbsp;&nbsp;|&nbsp;&nbsp;<code>React</code>&nbsp;&nbsp;|&nbsp;&nbsp;<code>~80s on CPU</code>
 </p>
 
+<p align="center">
+  <a href="https://github.com/yashkokane1031/SIH-2026-Prototype/raw/main/SIH_Demo.mp4">
+    <img src="https://img.shields.io/badge/▶_Watch_Demo-Video-B91C1C?style=for-the-badge" alt="Watch Demo Video"/>
+  </a>
+</p>
+
+https://github.com/yashkokane1031/SIH-2026-Prototype/raw/main/SIH_Demo.mp4
+
 ---
 
 ## The Problem
