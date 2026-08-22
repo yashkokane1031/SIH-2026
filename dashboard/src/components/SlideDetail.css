@@ -195,12 +195,15 @@
   height: 8px;
   background: linear-gradient(
     to right,
-    #1E293B 0%,
-    #1D4ED8 33%,
-    #F59E0B 66%,
-    #DC2626 100%
+    #0F172A 0%,
+    #312E81 20%,
+    #A855F7 45%,
+    #F59E0B 70%,
+    #EF4444 90%,
+    #FEF08A 100%
   );
-  border: 1px solid #0D1117;
+  border: 1px solid #1E293B;
+  border-radius: 2px;
 }
 
 /* --- Hover info tooltip --- */

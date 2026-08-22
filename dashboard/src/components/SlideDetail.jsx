@@ -11,21 +11,37 @@ const TIER_EXPLANATION = {
 };
 
 /**
- * Interpolate a color on the sequential heatmap colormap.
- * 0.0 = dark slate → 0.33 = blue → 0.66 = amber → 1.0 = red
+ * Helper to compute statistical percentile of an array
+ */
+function getPercentile(arr, p) {
+  if (!arr || arr.length === 0) return 0;
+  const sorted = [...arr].sort((a, b) => a - b);
+  const idx = (p / 100) * (sorted.length - 1);
+  const lower = Math.floor(idx);
+  const upper = Math.ceil(idx);
+  if (lower === upper) return sorted[lower];
+  return sorted[lower] + (sorted[upper] - sorted[lower]) * (idx - lower);
+}
+
+/**
+ * Perceptually rich, high-contrast colormap (Magma/Plasma inspired).
+ * Applies non-linear gamma scaling (power 0.45) to expand low-to-mid attention contrast.
+ * Stop sequence: Dark Slate → Deep Indigo → Vivid Purple → Golden Amber → Bright Red → White-Hot Yellow
  */
 function heatmapColor(value) {
-  const clamp = Math.max(0, Math.min(1, value));
+  const raw = Math.max(0, Math.min(1, value));
+  // Power transform (gamma ~ 0.45) to expand discrimination in low-mid attention range (0.01 - 0.30)
+  const clamp = Math.pow(raw, 0.45);
 
-  // 4-stop colormap: slate → blue → amber → red
   const stops = [
-    { pos: 0.0, r: 30,  g: 41,  b: 59  },   // #1E293B
-    { pos: 0.33, r: 29,  g: 78,  b: 216 },   // #1D4ED8
-    { pos: 0.66, r: 245, g: 158, b: 11  },   // #F59E0B
-    { pos: 1.0, r: 220, g: 38,  b: 38  },    // #DC2626
+    { pos: 0.0,  r: 15,  g: 23,  b: 42  },  // #0F172A (dark slate navy)
+    { pos: 0.20, r: 49,  g: 46,  b: 129 },  // #312E81 (deep indigo)
+    { pos: 0.45, r: 168, g: 85,  b: 247 },  // #A855F7 (vivid purple/violet)
+    { pos: 0.70, r: 245, g: 158, b: 11  },  // #F59E0B (golden amber)
+    { pos: 0.90, r: 239, g: 68,  b: 68  },  // #EF4444 (bright red)
+    { pos: 1.0,  r: 254, g: 240, b: 138 },  // #FEF08A (white-hot yellow core)
   ];
 
-  // Find the two stops we're between
   let lo = stops[0], hi = stops[stops.length - 1];
   for (let i = 0; i < stops.length - 1; i++) {
     if (clamp >= stops[i].pos && clamp <= stops[i + 1].pos) {
@@ -51,46 +67,69 @@ function heatmapColor(value) {
 export default function SlideDetail({ slide, metadata, action, onAction, onBack }) {
   const [hoveredPatch, setHoveredPatch] = useState(null);
 
-  // Build the normalized heatmap data with slide-specific bounding box scaling
+  // Build the normalized heatmap data with slide-specific density-aware bounding box scaling
   const heatmapData = useMemo(() => {
     const coords = slide.patch_coordinates || [];
     const weights = slide.patch_attention_weights || [];
     if (coords.length === 0) return null;
 
-    let minX = Infinity, maxX = -Infinity;
-    let minY = Infinity, maxY = -Infinity;
+    const xs = coords.map(([x]) => x);
+    const ys = coords.map(([, y]) => y);
 
-    coords.forEach(([x, y]) => {
-      if (x < minX) minX = x;
-      if (x > maxX) maxX = x;
-      if (y < minY) minY = y;
-      if (y > maxY) maxY = y;
-    });
+    const fullMinX = Math.min(...xs);
+    const fullMaxX = Math.max(...xs);
+    const fullMinY = Math.min(...ys);
+    const fullMaxY = Math.max(...ys);
 
-    const spanX = Math.max(1, maxX - minX);
-    const spanY = Math.max(1, maxY - minY);
-
-    const canvasWidth = 600;
-    const canvasHeight = 600;
-    const padding = 28;
-    const availW = canvasWidth - padding * 2;
-    const availH = canvasHeight - padding * 2;
-
-    const scale = Math.min(availW / spanX, availH / spanY);
-    const offsetX = padding + (availW - spanX * scale) / 2;
-    const offsetY = padding + (availH - spanY * scale) / 2;
+    const spanX = Math.max(1, fullMaxX - fullMinX);
+    const spanY = Math.max(1, fullMaxY - fullMinY);
 
     const isCompactGrid = spanX <= 25 && spanY <= 25;
 
+    let cropMinX = fullMinX;
+    let cropMaxX = fullMaxX;
+    let cropMinY = fullMinY;
+    let cropMaxY = fullMaxY;
+
+    if (!isCompactGrid) {
+      // Density-aware crop: use 2nd and 98th percentiles to tighten bounding box around the main tissue mass
+      const p02X = getPercentile(xs, 2);
+      const p98X = getPercentile(xs, 98);
+      const p02Y = getPercentile(ys, 2);
+      const p98Y = getPercentile(ys, 98);
+
+      const coreSpanX = Math.max(1, p98X - p02X);
+      const coreSpanY = Math.max(1, p98Y - p02Y);
+
+      // Add a subtle 4% buffer around the core cluster so peripheral boundary patches are clear
+      cropMinX = p02X - coreSpanX * 0.04;
+      cropMaxX = p98X + coreSpanX * 0.04;
+      cropMinY = p02Y - coreSpanY * 0.04;
+      cropMaxY = p98Y + coreSpanY * 0.04;
+    }
+
+    const cropSpanX = Math.max(1, cropMaxX - cropMinX);
+    const cropSpanY = Math.max(1, cropMaxY - cropMinY);
+
+    const canvasWidth = 600;
+    const canvasHeight = 600;
+    const padding = 24;
+    const availW = canvasWidth - padding * 2;
+    const availH = canvasHeight - padding * 2;
+
+    const scale = Math.min(availW / cropSpanX, availH / cropSpanY);
+    const offsetX = padding + (availW - cropSpanX * scale) / 2;
+    const offsetY = padding + (availH - cropSpanY * scale) / 2;
+
     // For compact synthetic grid, tile size matches grid step
-    // For real WSI with wider coordinates, size is sized to fill the tissue region legibly
+    // For real WSI with wider coordinates, size is sized to fill the tissue mass prominently
     const patchSize = isCompactGrid
       ? Math.max(16, scale * 0.92)
-      : Math.max(14, Math.min(24, Math.sqrt((availW * availH) / (coords.length * 1.8))));
+      : Math.max(16, Math.min(26, Math.sqrt((availW * availH) / (coords.length * 1.5))));
 
     const patches = coords.map(([x, y], i) => {
-      const px = offsetX + (x - minX) * scale;
-      const py = offsetY + (y - minY) * scale;
+      const px = offsetX + (x - cropMinX) * scale;
+      const py = offsetY + (y - cropMinY) * scale;
       const weight = weights[i] ?? 0;
       return {
         index: i,
@@ -108,8 +147,6 @@ export default function SlideDetail({ slide, metadata, action, onAction, onBack 
       canvasHeight,
       patchSize,
       patches,
-      minX, maxX, minY, maxY,
-      spanX, spanY,
     };
   }, [slide]);
 
