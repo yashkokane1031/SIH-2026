@@ -1,308 +1,208 @@
 <p align="center">
   <strong>AI-Powered Breast Cancer Histopathology Triage System</strong><br/>
-  <em>Attention-Based MIL + Monte Carlo Dropout Uncertainty Estimation</em>
+  <em>Attention-Based MIL + Monte Carlo Dropout Uncertainty Estimation + Dual Dataset Evaluation</em>
 </p>
 
 <p align="center">
-  <code>SIH 2026 Prototype</code>&nbsp;&nbsp;|&nbsp;&nbsp;<code>PyTorch</code>&nbsp;&nbsp;|&nbsp;&nbsp;<code>React</code>&nbsp;&nbsp;|&nbsp;&nbsp;<code>~80s on CPU</code>
+  <code>SIH 2026 Prototype (v2)</code>&nbsp;&nbsp;|&nbsp;&nbsp;<code>PyTorch</code>&nbsp;&nbsp;|&nbsp;&nbsp;<code>TorchMacenko</code>&nbsp;&nbsp;|&nbsp;&nbsp;<code>ResNet-50</code>&nbsp;&nbsp;|&nbsp;&nbsp;<code>React</code>
 </p>
 
 <p align="center">
   <a href="https://github.com/yashkokane1031/SIH-2026-Prototype/raw/main/SIH_Demo.mp4">
-    <img src="https://img.shields.io/badge/▶_Watch_Demo-Video-B91C1C?style=for-the-badge" alt="Watch Demo Video"/>
+    <img src="https://img.shields.io/badge/▶_Watch_Demo-Video_(v1_Baseline)-B91C1C?style=for-the-badge" alt="Watch Demo Video"/>
   </a>
 </p>
 
-https://github.com/yashkokane1031/SIH-2026-Prototype/raw/main/SIH_Demo.mp4
+> 📌 **Project Milestones & Versioning:**
+> * **`v1-prototype` (Git Tag):** The original Round 1 submission state using the tuned synthetic MIL pipeline and initial dashboard.
+> * **`main` (Current State):** Full integration of real **CAMELYON16** gigapixel WSIs (streaming ingestion, Macenko stain normalization, ResNet-50 2048-d feature encoding) alongside a live dual-dataset dashboard switcher.
 
 ---
 
 ## The Problem
 
-Every year, pathologists review **millions** of histopathology slides to detect breast cancer. Whole-slide images (WSIs) are gigapixel-scale — a single slide can contain over **100,000 tissue patches**. Manual review is:
+Every year, pathologists review **millions** of histopathology slides to detect breast cancer metastases in sentinel lymph nodes. Whole-Slide Images (WSIs) are gigapixel-scale — a single slide can contain over **100,000 tissue patches**. Manual review is:
 
 - **Slow**: 15–30 minutes per slide
-- **Error-prone**: inter-observer disagreement rates of 10–25%
-- **Unscalable**: critical bottleneck in under-resourced hospitals
+- **Error-prone**: Inter-observer disagreement rates of 10–25%
+- **Unscalable**: Critical bottleneck in under-resourced hospital networks
 
 ## Our Solution
 
-An end-to-end AI triage system that **prioritizes slides for pathologist review** using three components:
+An end-to-end AI triage system that **prioritizes slides for pathologist review** using three core components:
 
 ```
-                 ┌─────────────────────────────────────────────────────┐
-                 │                    PIPELINE                         │
-                 │                                                     │
-  Slide          │   ┌──────────┐   ┌──────────┐   ┌──────────────┐   │   Triage
-  (WSI)  ───────►│   │ Patch    │──►│ Attention │──►│ MC-Dropout   │   │──► Decision
-                 │   │ Encoder  │   │ MIL      │   │ Uncertainty  │   │
-                 │   │ (CNN)    │   │ (ABMIL)  │   │ (N=20 runs)  │   │   Tier 1/2/3
-                 │   └──────────┘   └──────────┘   └──────────────┘   │
-                 │                                                     │
-                 └─────────────────────────────────────────────────────┘
-                                        │
-                                        ▼
-                              ┌──────────────────┐
-                              │  React Dashboard  │
-                              │  - Triage queue   │
-                              │  - Attention maps │
-                              │  - Pathologist    │
-                              │    review panel   │
-                              └──────────────────┘
+                 ┌─────────────────────────────────────────────────────────┐
+                 │                        PIPELINE                         │
+                 │                                                         │
+  Slide (WSI)    │   ┌──────────────┐   ┌──────────┐   ┌──────────────┐   │   Triage
+  (Real/Synth) ──┼──►│ TorchMacenko │──►│ Attention │──►│ MC-Dropout   │───┼──► Decision
+                 │   │ + ResNet-50  │   │ MIL      │   │ Uncertainty  │   │
+                 │   │ (2048-d)     │   │ (ABMIL)  │   │ (N=20 runs)  │   │   Tier 1/2/3
+                 │   └──────────────┘   └──────────┘   └──────────────┘   │
+                 │                                                         │
+                 └─────────────────────────────────────────────────────────┘
+                                             │
+                                             ▼
+                               ┌───────────────────────────┐
+                               │     React Dashboard       │
+                               │  - [Real] / [Synth] toggle│
+                               │  - Spatial attention maps │
+                               │  - Pathologist audit log  │
+                               └───────────────────────────┘
 ```
 
-### Triage Tiers
+### 3-Tier Clinical Triage Routing
 
-| Tier | Label | Criteria | Action |
-|:----:|-------|----------|--------|
-| **1** | **Urgent** | Malignancy probability > 70%, low uncertainty | Review within 24 hours |
-| **2** | Routine | Malignancy probability < 30%, low uncertainty | Standard queue |
-| **3** | Flagged | High model uncertainty (regardless of probability) | Expert second opinion |
+| Tier | Label | Routing Criteria | Recommended Action |
+|:----:|:---|:---|:---|
+| **1** | **Urgent** | Malignancy probability $\ge 70\%$, low uncertainty | Fast-track review within 24 hours |
+| **2** | **Routine** | Malignancy probability $\le 30\%$, low uncertainty | Standard queue review |
+| **3** | **Flagged / Uncertain** | Predictive standard deviation $\ge 0.15$ (high uncertainty) | Mandatory expert second opinion |
 
-## Key Results
+---
 
-> Trained and evaluated on synthetic data designed to mimic real CAMELYON16 feature distributions. See [Data Disclaimer](#synthetic-data--production-path) below.
+## Datasets & Results
 
-### Training Performance
+The system evaluates two distinct cohorts, both accessible directly in the React dashboard:
 
-| Epoch | Train Loss | Train AUC | Val AUC |
-|------:|-----------:|----------:|--------:|
-| 1 | 0.6574 | 0.5859 | 0.9078 |
-| 5 | 0.0185 | 0.9996 | 0.8882 |
-| 10 | 0.0001 | 1.0000 | 0.8698 |
-| 15 | 0.0001 | 1.0000 | 0.8607 |
-| 20 | 0.0027 | 1.0000 | 0.8898 |
-| **25** | **0.0001** | **1.0000** | **0.8833** |
+### 1. Real CAMELYON16 Cohort ($N=20$ Whole Slide Images)
+* **Ingestion:** 20 balanced gigapixel WSIs (10 Normal, 10 Tumor) streamed from the AWS S3 open data mirror.
+* **Preprocessing:** Otsu tissue segmentation, tiled at 20x ($256 \times 256$), normalized with `TorchMacenkoNormalizer`, and encoded via pretrained **ResNet-50** into $2048$-d embeddings ($8,000$ real patches total).
+* **Split:** 12 Train (6 Normal, 6 Tumor), 4 Validation (2 Normal, 2 Tumor), 4 Test (2 Normal, 2 Tumor).
 
-### Triage Distribution (N=200 test slides)
+| Split | Number of Slides | ROC-AUC | Clinical Breakdown / Observations |
+|:---|:---:|:---:|:---|
+| **Train** | 12 slides | **1.0000** | Overfitting to the 12-slide training set (623K parameters). |
+| **Validation** | 4 slides | **0.7500** | Correctly identified macrometastasis (`tumor_001` @ 0.8982), 1 false positive (`normal_010`). |
+| **Held-Out Test** | 4 slides | **0.7500** | 3 out of 4 pairwise comparisons correctly ranked. Correctly identified benigns (`normal_001`, `normal_002`). |
 
-| Tier | Count | Percentage | Description |
-|------|------:|-----------:|-------------|
-| Urgent | 85 | 42.5% | High-confidence malignant — fast-tracked |
-| Routine | 90 | 45.0% | High-confidence benign — standard queue |
-| Flagged | 25 | 12.5% | Ambiguous — routed to expert review |
+*(Note: MC-Dropout inference yields minor run-to-run stochastic variance of $\pm 0.01\text{--}0.02$ due to random dropout mask sampling across the 20 forward passes).*
 
-**The system correctly routes 87.5% of slides with high confidence**, while flagging the genuinely ambiguous 12.5% for expert pathologist review — exactly the behavior a clinical triage system should exhibit.
+> ⚠️ **Micrometastasis Under-Calling Limitation:** On real held-out slides with small metastatic foci (`tumor_007` prob 0.4343, `tumor_010` prob 0.2405), the 400-patch grid and 12-slide training budget resulted in lower predicted probabilities. Addressing this requires scaling to a larger training cohort and pathology-specific foundation models.
 
-## Architecture
+---
 
-### 1. ABMIL — Attention-Based Multiple Instance Learning
+### 2. Tuned Synthetic Benchmark ($N=550$ Slides, $N=50$ Test Slides)
+* **Configuration:** 512-d embeddings, $\mu_{\text{shift}}=0.17$, $\sigma=0.06$, noise std $=1.50$, 400 Train / 100 Val / 50 Test slides.
+* **Validation ROC-AUC:** **`0.8833`**
+* **Test ROC-AUC:** **`0.8637`**
 
-The core challenge: we have a **bag-level label** (malignant/benign slide) but need to reason about **instance-level features** (individual tissue patches). ABMIL solves this with learned attention:
+#### Test Set Triage Distribution ($N=50$ slides)
+| Tier | Slide Count | Percentage | Clinical Role |
+|:---|:---:|:---:|:---|
+| **Urgent (Tier 1)** | 19 slides | **38.0%** | High-confidence malignant cases |
+| **Routine (Tier 2)** | 24 slides | **48.0%** | High-confidence benign cases |
+| **Flagged / Uncertain (Tier 3)** | 7 slides | **14.0%** | Borderline / ambiguous cases routed for expert review |
 
+---
+
+## React Dashboard with Dual-Dataset Switcher
+
+The React dashboard includes a header toggle that allows instant switching between both datasets:
 ```
-Per-patch features (512-d)
-        │
-        ▼
-  Linear Projection (512 → 256)
-        │
-        ▼
-  Gated Attention Network
-  ├── Tanh path (256 → 128)
-  └── Sigmoid gate (256 → 128)
-        │
-        ▼ element-wise product
-  Attention Scores (128 → 1 per patch)
-        │
-        ▼ softmax normalization
-  Attention Weights [0, 1]
-        │
-        ▼ weighted sum
-  Slide Embedding (256-d)
-        │
-        ▼
-  Classifier (256 → 128 → 1, with Dropout)
-        │
-        ▼
-  Malignancy Probability
+[ Real CAMELYON16 ]   [ Synthetic Benchmark ]
 ```
 
-**Why gated attention?** The Tanh+Sigmoid gating mechanism (from [Ilse et al., ICML 2018](https://arxiv.org/abs/1802.04712)) lets the model learn _which_ patches are informative and _how_ informative they are — crucial for finding small tumor regions in a sea of normal tissue.
+* **Real CAMELYON16 View:** Displays the 20 real WSI feature bags, complete with patch coordinates, attention weights, and triage routing.
+* **Synthetic Benchmark View:** Displays the 50 test slides exhibiting the full 3-tier spread (including all 7 flagged uncertain cases).
+* **Attention Heatmap Viewer:** Visualizes patch-level attention distributions to explain model reasoning.
+* **Pathologist Audit Trail:** Interactive *Confirm* and *Override* action logging.
 
-### 2. MC-Dropout — Monte Carlo Dropout Uncertainty
-
-Standard neural networks output a **point estimate** — "82% malignant" — with no indication of confidence. MC-Dropout addresses this:
-
-1. Keep **dropout active** during inference (not just training)
-2. Run the same slide through the model **20 times** (each pass samples different dropout masks)
-3. **Mean** across runs = malignancy score
-4. **Standard deviation** across runs = uncertainty score
-
-High uncertainty signals **"the model isn't sure"** — could be a borderline case, an unusual tissue morphology, or a distribution shift. These slides get routed to **Tier 3** for mandatory expert review.
-
-### 3. React Dashboard
-
-Clinical-grade visualization built for pathologist workflows:
-
-- **Triage queue**: Priority-sorted table with tier badges, probability, and uncertainty
-- **Attention heatmap**: Patch-level attention weights rendered as a spatial grid — shows _where_ the model is looking
-- **Pathologist actions**: Confirm or override the AI classification (logged for audit trail)
-- **Design**: IBM Plex typography, lab-report aesthetic — a diagnostics tool, not a consumer app
+---
 
 ## Quick Start
 
-### Backend (Python Pipeline)
+### 1. Python Environment Setup
+
+Install the exact verified dependency versions:
 
 ```bash
-# Prerequisites
-pip install torch numpy scikit-learn
+# Core deep learning & scientific computing
+pip install torch>=2.0.0 torchvision>=0.15.0 numpy>=1.24.0 scikit-learn>=1.3.0 requests>=2.28.0
 
-# Run the full pipeline (~80s on CPU)
-python pipeline.py
-
-# Output → triage_results.json
+# Whole-Slide Image handling & stain normalization (Windows-compatible binary wheels)
+pip install openslide-bin==4.0.1.2 openslide-python==1.4.6 torchstain==1.4.1
 ```
 
-### Frontend (React Dashboard)
+### 2. Run the Pipeline
+
+```bash
+# Run both Real CAMELYON16 and Synthetic pipelines (default):
+python pipeline.py --dataset both
+
+# Or run a specific dataset:
+python pipeline.py --dataset camelyon16
+python pipeline.py --dataset synthetic
+```
+
+### 3. Launch the React Dashboard
 
 ```bash
 cd dashboard
 npm install
 npm run dev
 
-# → http://localhost:5173/
+# Open http://localhost:5173/ in your browser
 ```
 
-The dashboard reads `triage_results.json` from `dashboard/public/`. The pipeline automatically generates this file.
-
-### Generate a Full Report
+### 4. Evaluate Splits & Reproduce Diagnostics
 
 ```bash
-# Trains model, runs MC-Dropout on 200 slides, saves AUC log + tier distribution
-python report.py
-
-# Output:
-#   training_auc_log.csv    — per-epoch loss/AUC
-#   triage_results_200.json — full 200-slide triage output
-#   run_report.txt          — human-readable summary
+# Run the split evaluation diagnostic:
+python scratch/eval_splits.py
 ```
 
-## Project Structure
+---
+
+## Repository Structure
 
 ```
 SIH 26 Prototype/
-├── pipeline.py              # Complete end-to-end pipeline (single script)
-│                            #   - Synthetic data generator
-│                            #   - ABMIL model (PyTorch)
-│                            #   - Training loop with AUC reporting
-│                            #   - MC-Dropout inference
-│                            #   - Tiered triage router
-│                            #   - JSON export
-├── report.py                # Reporting script (AUC log + 200-slide triage)
-├── triage_results.json      # Pipeline output (consumed by dashboard)
-├── training_auc_log.csv     # Per-epoch training metrics
-├── run_report.txt           # Human-readable results summary
+├── pipeline.py                              # End-to-end ABMIL + MC-Dropout training & triage pipeline
+├── download_and_extract_camelyon16.py       # Streaming WSI download, Macenko norm & ResNet-50 extraction
+├── report.py                                # Benchmark reporting utility
+├── scratch/
+│   └── eval_splits.py                       # Split-level validation/test AUC evaluation tool
+├── data/
+│   ├── camelyon16_reference.csv             # Slide manifest with labels & AWS S3 URLs
+│   ├── macenko_sample_comparison.png        # Authentic WSI patch before/after Macenko normalization proof
+│   └── camelyon16_features/                 # Cached ResNet-50 feature embeddings (20 .npz files, ~28 MB)
 │
-├── dashboard/               # React frontend
+├── dashboard/                               # React + Vite frontend
 │   ├── public/
-│   │   └── triage_results.json
+│   │   ├── triage_results_camelyon16.json   # Live data feed for Real CAMELYON16
+│   │   └── triage_results_synthetic.json    # Live data feed for Synthetic Benchmark
 │   └── src/
-│       ├── index.css        # Design tokens (colors, typography, spacing)
-│       ├── App.jsx          # Root: data loading, view routing
-│       ├── App.css          # Layout, header, state screens
+│       ├── App.jsx                          # Root component with dataset switcher
 │       └── components/
-│           ├── TriageQueue.jsx   # Summary cards + prioritized table
-│           ├── TriageQueue.css
-│           ├── SlideDetail.jsx   # Heatmap + metrics + pathologist review
-│           └── SlideDetail.css
+│           ├── TriageQueue.jsx              # Prioritized triage queue
+│           └── SlideDetail.jsx              # Spatial attention heatmap & audit panel
 │
 └── README.md
 ```
 
-## Output JSON Schema
+---
 
-```jsonc
-{
-  "metadata": {
-    "model": "ABMIL (Attention-Based MIL) with Gated Attention",
-    "dataset": "Synthetic (standing in for CAMELYON16-derived features)",
-    "feature_dim": 512,
-    "mc_dropout_runs": 20,
-    "dropout_rate": 0.25,
-    "triage_thresholds": {
-      "urgent_prob": 0.7,      // Probability above → Tier 1
-      "routine_prob": 0.3,     // Probability below → Tier 2
-      "uncertain_std": 0.15    // Uncertainty above → Tier 3
-    }
-  },
-  "slides": [
-    {
-      "slide_id": "test_042",               // Unique identifier
-      "true_label": 1,                      // Ground truth (0=benign, 1=malignant)
-      "malignancy_probability": 0.9993,     // MC-Dropout mean prediction
-      "uncertainty_score": 0.0009,          // MC-Dropout std deviation
-      "tier": "urgent",                     // Triage routing decision
-      "num_patches": 147,                   // Patches in this slide
-      "patch_coordinates": [[x, y], ...],   // Grid positions for heatmap
-      "patch_attention_weights": [0.003, ...]  // Normalized [0-1] attention
-    }
-  ]
-}
-```
+## Limitations & Future Work
 
-## Configurable Parameters
+1. **Real-Data Cohort Size:** Current real-world validation is conducted on a 20-slide subset ($N=20$). Scaling to the full 270+ CAMELYON16 training set is planned for production deployment.
+2. **Micrometastasis Sensitivity:** Improving sensitivity on tiny metastatic foci ($<2\text{ mm}$) through denser multiscale patch tiling and hard negative mining.
+3. **Model Calibration:** Implementing temperature scaling, Expected Calibration Error (ECE) quantification, and reliability diagrams to optimize triage thresholds.
+4. **Foundation Model Integration:** Replacing standard ImageNet ResNet-50 with pathology-specific vision foundation models (such as **UNI**, **CONCH**, or **Prov-GigaPath**).
+5. **Multi-Center Stain Robustness:** Validating Macenko normalization across diverse scanner profiles and staining protocols.
 
-All thresholds are constants at the top of `pipeline.py`:
-
-| Parameter | Default | Description |
-|-----------|---------|-------------|
-| `TUMOR_MEAN_SHIFT_MU` | 0.17 | Per-slide tumor signal strength (mean) |
-| `TUMOR_MEAN_SHIFT_STD` | 0.06 | Signal variability across slides |
-| `FEATURE_NOISE_STD` | 1.5 | Patch feature noise (controls task difficulty) |
-| `TUMOR_PATCH_FRAC_MIN/MAX` | 0.05 / 0.20 | Tumor patch fraction range |
-| `MC_DROPOUT_RUNS` | 20 | Stochastic forward passes for uncertainty |
-| `URGENT_PROB_THRESHOLD` | 0.7 | Probability above → Tier 1 |
-| `ROUTINE_PROB_THRESHOLD` | 0.3 | Probability below → Tier 2 |
-| `UNCERTAINTY_THRESHOLD` | 0.15 | Uncertainty above → Tier 3 |
-
-## Synthetic Data & Production Path
-
-> **This prototype uses synthetic feature vectors** standing in for real CNN embeddings due to hackathon time and compute constraints. **The MIL architecture, attention mechanism, MC-Dropout uncertainty estimation, and triage routing are all real, validated components** that transfer directly to production.
-
-### What's Synthetic
-
-- 512-d patch feature vectors drawn from normal distributions
-- Per-slide tumor signal sampled from `N(0.17, 0.06)` — some slides are hard, some easy
-- Benign/tumor patch distributions overlap significantly (noise std = 1.5)
-- Grid coordinates simulate sparse tissue layout
-
-### Production Swap (One Function Change)
-
-To deploy with real data:
-
-1. **Extract features**: Run a pretrained encoder (ResNet-50, CTransPath, UNI, or CONCH) on real WSI patches to produce 512-d embeddings
-2. **Replace one function**: Swap `generate_synthetic_bags()` with a data loader reading `.h5` / `.pt` feature files
-3. **Everything else is unchanged**: Model architecture, training loop, MC-Dropout inference, triage routing, dashboard — all production-ready
-
-### Recommended Feature Extractors
-
-| Model | Source | Domain |
-|-------|--------|--------|
-| CTransPath | [GitHub](https://github.com/Xiyue-Wang/TransPath) | Pathology-specific |
-| UNI | [GitHub](https://github.com/mahmoodlab/UNI) | Pathology foundation model |
-| CONCH | [GitHub](https://github.com/mahmoodlab/CONCH) | Vision-language pathology |
-| ResNet-50 (ImageNet) | torchvision | General (baseline) |
-
-## References
-
-- Ilse, M., Tomczak, J., & Welling, M. (2018). [Attention-based Deep Multiple Instance Learning](https://arxiv.org/abs/1802.04712). _ICML_.
-- Gal, Y. & Ghahramani, Z. (2016). [Dropout as a Bayesian Approximation](https://arxiv.org/abs/1506.02142). _ICML_.
-- Bejnordi, B.E. et al. (2017). [Diagnostic Assessment of Deep Learning for Detection of Lymph Node Metastases](https://doi.org/10.1001/jama.2017.14585) (CAMELYON16). _JAMA_.
+---
 
 ## Tech Stack
 
-| Layer | Technology |
-|-------|-----------|
-| ML Framework | PyTorch 2.x |
-| Model | ABMIL with Gated Attention (230K params) |
-| Uncertainty | MC-Dropout (20 stochastic passes) |
-| Metrics | scikit-learn (AUC) |
-| Frontend | React + Vite |
-| Design | IBM Plex Mono/Sans, vanilla CSS |
-
-## License
-
-MIT — Hackathon prototype, use freely.
+| Component | Technology |
+|:---|:---|
+| **Deep Learning & Modeling** | PyTorch, TorchVision, Scikit-Learn |
+| **Pathology & Stain Normalization** | OpenSlide (`openslide-python` + `openslide-bin`), TorchStain (`TorchMacenkoNormalizer`) |
+| **Feature Extraction** | Pretrained ResNet-50 ($2048$-d embeddings) |
+| **Uncertainty Quantification** | Monte Carlo Dropout ($N=20$ stochastic forward passes) |
+| **Frontend Dashboard** | React 19, Vite, IBM Plex Typography, Vanilla CSS |
 
 ---
 
