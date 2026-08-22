@@ -51,29 +51,66 @@ function heatmapColor(value) {
 export default function SlideDetail({ slide, metadata, action, onAction, onBack }) {
   const [hoveredPatch, setHoveredPatch] = useState(null);
 
-  // Build the heatmap grid data
-  const gridData = useMemo(() => {
-    const coords = slide.patch_coordinates;
-    const weights = slide.patch_attention_weights;
+  // Build the normalized heatmap data with slide-specific bounding box scaling
+  const heatmapData = useMemo(() => {
+    const coords = slide.patch_coordinates || [];
+    const weights = slide.patch_attention_weights || [];
+    if (coords.length === 0) return null;
 
-    // Find grid bounds
-    let maxX = 0, maxY = 0;
+    let minX = Infinity, maxX = -Infinity;
+    let minY = Infinity, maxY = -Infinity;
+
     coords.forEach(([x, y]) => {
+      if (x < minX) minX = x;
       if (x > maxX) maxX = x;
+      if (y < minY) minY = y;
       if (y > maxY) maxY = y;
     });
 
-    // Build a sparse grid map
-    const grid = {};
-    coords.forEach(([x, y], i) => {
-      grid[`${x},${y}`] = {
-        x, y,
-        weight: weights[i],
+    const spanX = Math.max(1, maxX - minX);
+    const spanY = Math.max(1, maxY - minY);
+
+    const canvasWidth = 600;
+    const canvasHeight = 600;
+    const padding = 28;
+    const availW = canvasWidth - padding * 2;
+    const availH = canvasHeight - padding * 2;
+
+    const scale = Math.min(availW / spanX, availH / spanY);
+    const offsetX = padding + (availW - spanX * scale) / 2;
+    const offsetY = padding + (availH - spanY * scale) / 2;
+
+    const isCompactGrid = spanX <= 25 && spanY <= 25;
+
+    // For compact synthetic grid, tile size matches grid step
+    // For real WSI with wider coordinates, size is sized to fill the tissue region legibly
+    const patchSize = isCompactGrid
+      ? Math.max(16, scale * 0.92)
+      : Math.max(14, Math.min(24, Math.sqrt((availW * availH) / (coords.length * 1.8))));
+
+    const patches = coords.map(([x, y], i) => {
+      const px = offsetX + (x - minX) * scale;
+      const py = offsetY + (y - minY) * scale;
+      const weight = weights[i] ?? 0;
+      return {
         index: i,
+        origX: x,
+        origY: y,
+        px,
+        py,
+        weight,
+        color: heatmapColor(weight),
       };
     });
 
-    return { maxX, maxY, grid, totalPatches: coords.length };
+    return {
+      canvasWidth,
+      canvasHeight,
+      patchSize,
+      patches,
+      minX, maxX, minY, maxY,
+      spanX, spanY,
+    };
   }, [slide]);
 
   const tierClass = slide.tier;
@@ -149,40 +186,54 @@ export default function SlideDetail({ slide, metadata, action, onAction, onBack 
         <div className="slide-detail__section-header">
           <h3 className="slide-detail__section-title">Attention Heatmap</h3>
           <span className="slide-detail__section-sub">
-            Patch-level attention weights — brighter regions indicate areas the model focused on
+            Patch-level attention weights normalized across tissue coordinates — brighter regions indicate high attention
           </span>
         </div>
 
         <div className="heatmap-container">
-          <div
-            className="heatmap-grid"
-            style={{
-              gridTemplateColumns: `repeat(${gridData.maxX + 1}, 1fr)`,
-              gridTemplateRows: `repeat(${gridData.maxY + 1}, 1fr)`,
-            }}
-          >
-            {Array.from({ length: (gridData.maxY + 1) }).map((_, y) =>
-              Array.from({ length: (gridData.maxX + 1) }).map((_, x) => {
-                const cell = gridData.grid[`${x},${y}`];
-                const isEmpty = !cell;
-                const weight = cell ? cell.weight : 0;
-                const isHovered = hoveredPatch !== null && cell && cell.index === hoveredPatch;
+          {heatmapData && (
+            <svg
+              className="heatmap-svg"
+              viewBox={`0 0 ${heatmapData.canvasWidth} ${heatmapData.canvasHeight}`}
+              preserveAspectRatio="xMidYMid meet"
+            >
+              {/* Background */}
+              <rect
+                x="0"
+                y="0"
+                width={heatmapData.canvasWidth}
+                height={heatmapData.canvasHeight}
+                fill="#0D1117"
+                rx="4"
+              />
 
+              {/* Individual patch tiles */}
+              {heatmapData.patches.map((p) => {
+                const isHovered = hoveredPatch === p.index;
+                const half = heatmapData.patchSize / 2;
                 return (
-                  <div
-                    key={`${x}-${y}`}
-                    className={`heatmap-cell ${isEmpty ? 'heatmap-cell--empty' : ''} ${isHovered ? 'heatmap-cell--hovered' : ''}`}
-                    style={!isEmpty ? {
-                      backgroundColor: heatmapColor(weight),
-                    } : undefined}
-                    onMouseEnter={() => cell && setHoveredPatch(cell.index)}
+                  <rect
+                    key={p.index}
+                    className="heatmap-patch"
+                    x={p.px - half}
+                    y={p.py - half}
+                    width={heatmapData.patchSize}
+                    height={heatmapData.patchSize}
+                    fill={p.color}
+                    rx="2"
+                    stroke={isHovered ? '#FFFFFF' : 'rgba(0, 0, 0, 0.4)'}
+                    strokeWidth={isHovered ? 2.5 : 0.75}
+                    onMouseEnter={() => setHoveredPatch(p.index)}
                     onMouseLeave={() => setHoveredPatch(null)}
-                    title={cell ? `Patch (${x}, ${y})\nAttention: ${weight.toFixed(4)}` : ''}
-                  />
+                  >
+                    <title>
+                      {`Patch #${p.index} (${p.origX}, ${p.origY})\nAttention: ${p.weight.toFixed(4)}`}
+                    </title>
+                  </rect>
                 );
-              })
-            )}
-          </div>
+              })}
+            </svg>
+          )}
 
           {/* Colormap legend */}
           <div className="heatmap-legend">
@@ -194,12 +245,12 @@ export default function SlideDetail({ slide, metadata, action, onAction, onBack 
           {/* Hover info */}
           {hoveredPatch !== null && (
             <div className="heatmap-hover-info">
-              <span className="heatmap-hover-info__label">Patch {hoveredPatch}</span>
+              <span className="heatmap-hover-info__label">Patch #{hoveredPatch}</span>
               <span className="heatmap-hover-info__value">
                 Attention: {slide.patch_attention_weights[hoveredPatch]?.toFixed(4)}
               </span>
               <span className="heatmap-hover-info__coord">
-                ({slide.patch_coordinates[hoveredPatch]?.[0]}, {slide.patch_coordinates[hoveredPatch]?.[1]})
+                Coords: ({slide.patch_coordinates[hoveredPatch]?.[0]}, {slide.patch_coordinates[hoveredPatch]?.[1]})
               </span>
             </div>
           )}
