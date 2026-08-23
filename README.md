@@ -136,21 +136,27 @@ python pipeline.py --dataset camelyon16
 python pipeline.py --dataset synthetic
 ```
 
-### 3. Launch the React Dashboard
+### 3. Launch the Clinical Workspace Frontend
 
 ```bash
-cd dashboard
+# Pathogen Clinical Decision-Support UI (Port 5174):
+cd frontend
 npm install
 npm run dev
 
-# Open http://localhost:5173/ in your browser
+# Open http://localhost:5174/ in your browser
 ```
 
-### 4. Evaluate Splits & Reproduce Diagnostics
+*(Note: The initial prototype dashboard remains accessible in `dashboard/` on port 5173).*
+
+### 4. Evaluate Splits & Run Robustness Tests
 
 ```bash
-# Run the split evaluation diagnostic:
+# Split-level validation and test AUC evaluation:
 python scratch/eval_splits.py
+
+# Simulated multi-site staining variation & domain shift test:
+python scratch/stain_robustness_test.py
 ```
 
 ---
@@ -163,24 +169,37 @@ SIH 26 Prototype/
 ├── download_and_extract_camelyon16.py       # Streaming WSI download, Macenko norm & ResNet-50 extraction
 ├── report.py                                # Benchmark reporting utility
 ├── scratch/
-│   └── eval_splits.py                       # Split-level validation/test AUC evaluation tool
+│   ├── eval_splits.py                       # Split-level validation/test AUC evaluation tool
+│   └── stain_robustness_test.py             # Simulated domain shift & stain robustness proxy analysis
 ├── data/
 │   ├── camelyon16_reference.csv             # Slide manifest with labels & AWS S3 URLs
 │   ├── macenko_sample_comparison.png        # Authentic WSI patch before/after Macenko normalization proof
 │   └── camelyon16_features/                 # Cached ResNet-50 feature embeddings (20 .npz files, ~28 MB)
 │
-├── dashboard/                               # React + Vite frontend
+├── frontend/                                # Production-grade Pathogen Clinical Decision-Support Workspace
 │   ├── public/
-│   │   ├── triage_results_camelyon16.json   # Live data feed for Real CAMELYON16
-│   │   └── triage_results_synthetic.json    # Live data feed for Synthetic Benchmark
-│   └── src/
-│       ├── App.jsx                          # Root component with dataset switcher
-│       └── components/
-│           ├── TriageQueue.jsx              # Prioritized triage queue
-│           └── SlideDetail.jsx              # Spatial attention heatmap & audit panel
+│   │   ├── triage_results_camelyon16.json   # Live data feed for Real CAMELYON16 (20 slides)
+│   │   └── triage_results_synthetic.json    # Live data feed for Synthetic Benchmark (50 slides)
+│   ├── src/
+│   │   ├── App.jsx                          # Clinical UI with live SVG Donut chart, WSI heatmaps & audit form
+│   │   ├── App.css                          # Clinical design system (Geist & Geist Mono, high-contrast Magma)
+│   │   └── main.jsx                         # Application entry point
+│   ├── index.html
+│   └── vite.config.js                       # Vite configuration (port 5174)
 │
+├── dashboard/                               # Initial prototype dashboard (port 5173)
+├── Misc/                                    # Documentation, demo video (SIH_Demo.mp4), and design assets
 └── README.md
 ```
+
+---
+
+## Simulated Domain Shift & Stain Robustness Analysis
+
+To evaluate model stability under scanner variation and multi-site staining discrepancies beyond Macenko normalization, `scratch/stain_robustness_test.py` executes a simulated proxy test:
+* **Feature-Space Affine Perturbation:** Applies slide-level multiplicative scaling $s \sim \mathcal{N}(1.0, 0.15)$ and additive shift $b \sim \mathcal{N}(0.0, 0.10)$ across embedding dimensions.
+* **Evaluation:** Analyzes degradation in predicted malignancy probabilities, predictive uncertainty ($\sigma$), and triage tier stability across both real CAMELYON16 and synthetic test sets.
+* *(Note: This is explicitly framed as a simulated proxy test to probe feature space sensitivity, not real multi-center data).*
 
 ---
 
@@ -190,7 +209,7 @@ SIH 26 Prototype/
 2. **Micrometastasis Sensitivity:** Improving sensitivity on tiny metastatic foci ($<2\text{ mm}$) through denser multiscale patch tiling and hard negative mining.
 3. **Model Calibration:** Implementing temperature scaling, Expected Calibration Error (ECE) quantification, and reliability diagrams to optimize triage thresholds.
 4. **Foundation Model Integration:** Replacing standard ImageNet ResNet-50 with pathology-specific vision foundation models (such as **UNI**, **CONCH**, or **Prov-GigaPath**).
-5. **Multi-Center Stain Robustness:** Validating Macenko normalization across diverse scanner profiles and staining protocols.
+5. **Multi-Center Stain Robustness:** Validating Macenko normalization across diverse real scanner profiles and staining protocols.
 
 ---
 
@@ -202,7 +221,7 @@ SIH 26 Prototype/
 | **Pathology & Stain Normalization** | OpenSlide (`openslide-python` + `openslide-bin`), TorchStain (`TorchMacenkoNormalizer`) |
 | **Feature Extraction** | Pretrained ResNet-50 ($2048$-d embeddings) |
 | **Uncertainty Quantification** | Monte Carlo Dropout ($N=20$ stochastic forward passes) |
-| **Frontend Dashboard** | React 19, Vite, IBM Plex Typography, Vanilla CSS |
+| **Clinical Decision UI** | React 19, Vite, Geist & Geist Mono Typography, Vanilla CSS, SVG Data Visualizations |
 
 ---
 
