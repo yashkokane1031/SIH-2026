@@ -23,6 +23,12 @@ run_report.txt
 tune_params.py
 tune_fine.py
 
+# Data & Large WSI files
+data/sample_wsi/
+data/temp_wsi/
+*.tif
+*.svs
+
 # OS
 .DS_Store
 Thumbs.db

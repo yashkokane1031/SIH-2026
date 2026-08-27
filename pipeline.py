@@ -97,6 +97,10 @@ URGENT_PROB_THRESHOLD = 0.7     # Probability above this → urgent
 ROUTINE_PROB_THRESHOLD = 0.3    # Probability below this → routine
 UNCERTAINTY_THRESHOLD = 0.15    # Uncertainty above this → uncertain (needs review)
 
+# --- Probability-Zone Safety Net (independent of MC-Dropout) ---
+PROB_ZONE_LOW = 0.20            # Lower bound of ambiguous probability zone
+PROB_ZONE_HIGH = 0.70           # Upper bound of ambiguous probability zone
+
 # --- Output & Paths ---
 BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = BASE_DIR / "data"
@@ -414,10 +418,10 @@ def train_model(
     train_loader = DataLoader(train_dataset, batch_size=1, shuffle=True)
     val_loader = DataLoader(val_dataset, batch_size=1, shuffle=False)
 
-    print("=" * 60)
-    print(f"Training ABMIL  |  device={device}  |  epochs={num_epochs}")
-    print(f"Train: {len(train_bags)} slides  |  Val: {len(val_bags)} slides")
-    print("=" * 60)
+    print("=" * 60, flush=True)
+    print(f"Training ABMIL  |  device={device}  |  epochs={num_epochs}", flush=True)
+    print(f"Train: {len(train_bags)} slides  |  Val: {len(val_bags)} slides", flush=True)
+    print("=" * 60, flush=True)
 
     for epoch in range(1, num_epochs + 1):
         # ----- Training -----
@@ -469,10 +473,11 @@ def train_model(
             f"  Epoch {epoch:2d}/{num_epochs}  |  "
             f"Loss: {avg_loss:.4f}  |  "
             f"Train AUC: {train_auc:.4f}  |  "
-            f"Val AUC: {val_auc:.4f}"
+            f"Val AUC: {val_auc:.4f}",
+            flush=True,
         )
 
-    print("=" * 60)
+    print("=" * 60, flush=True)
     return model
 
 
@@ -566,34 +571,57 @@ def assign_triage_tier(
     urgent_prob: float = URGENT_PROB_THRESHOLD,
     routine_prob: float = ROUTINE_PROB_THRESHOLD,
     uncertain_std: float = UNCERTAINTY_THRESHOLD,
-) -> str:
+    prob_zone_low: float = PROB_ZONE_LOW,
+    prob_zone_high: float = PROB_ZONE_HIGH,
+) -> tuple[str, str]:
     """
     Assign a triage tier based on malignancy probability and uncertainty.
 
-    Decision logic:
-        Tier 1 (urgent):    prob > urgent_prob  AND uncertainty < uncertain_std
-        Tier 2 (routine):   prob <= routine_prob AND uncertainty < uncertain_std
-        Tier 3 (uncertain): uncertainty >= uncertain_std (regardless of prob)
+    Two-signal safety net — a slide is flagged as uncertain if EITHER:
+        (a) MC-Dropout uncertainty >= uncertain_std  (variance-based signal)
+        (b) Probability falls in the ambiguous zone: prob_zone_low < prob < prob_zone_high
+            (probability-based signal, independent of dropout variance)
 
-    If prob is in the middle range and uncertainty is low, defaults to "routine"
-    as a conservative fallback (pathologist reviews these anyway).
+    Full decision logic (evaluated in order):
+        Tier 3 (uncertain): uncertainty >= uncertain_std            → signal (a)
+        Tier 3 (uncertain): prob_zone_low < prob < prob_zone_high   → signal (b)
+        Tier 1 (urgent):    prob > urgent_prob                      → confident malignant
+        Tier 2 (routine):   prob <= routine_prob                    → confident benign
+        Tier 2 (routine):   fallback for remaining cases
+
+    Returns:
+        (tier, reason): tier is "urgent"|"routine"|"uncertain",
+                        reason is a human-readable string explaining the trigger.
     """
+    # Signal (a): MC-Dropout uncertainty exceeds threshold
     if uncertainty >= uncertain_std:
-        return "uncertain"       # Tier 3: needs expert review
-    elif probability > urgent_prob:
-        return "urgent"          # Tier 1: likely malignant, high confidence
+        return ("uncertain",
+                f"MC-Dropout uncertainty ({uncertainty:.4f}) >= threshold ({uncertain_std})")
+
+    # Signal (b): Probability falls in ambiguous zone
+    if prob_zone_low < probability < prob_zone_high:
+        return ("uncertain",
+                f"Probability ({probability:.4f}) in ambiguous zone "
+                f"({prob_zone_low}–{prob_zone_high})")
+
+    # Confident predictions
+    if probability > urgent_prob:
+        return ("urgent",
+                f"Probability ({probability:.4f}) > urgent threshold ({urgent_prob})")
     elif probability <= routine_prob:
-        return "routine"         # Tier 2: likely benign, high confidence
+        return ("routine",
+                f"Probability ({probability:.4f}) <= routine threshold ({routine_prob})")
     else:
-        # Middle-ground probability with low uncertainty
-        # Conservative: flag for standard review
-        return "routine"
+        return ("routine",
+                f"Probability ({probability:.4f}) outside ambiguous zone, defaulting routine")
 
 
 def route_slides(results: list[dict]) -> list[dict]:
     """Apply triage routing to all inference results."""
     for r in results:
-        r["tier"] = assign_triage_tier(r["mean_prob"], r["std_prob"])
+        tier, reason = assign_triage_tier(r["mean_prob"], r["std_prob"])
+        r["tier"] = tier
+        r["triage_reason"] = reason
     return results
 
 
@@ -622,11 +650,15 @@ def export_results(
                 "urgent_prob": URGENT_PROB_THRESHOLD,
                 "routine_prob": ROUTINE_PROB_THRESHOLD,
                 "uncertain_std": UNCERTAINTY_THRESHOLD,
+                "prob_zone_low": PROB_ZONE_LOW,
+                "prob_zone_high": PROB_ZONE_HIGH,
             },
             "generated_at": datetime.now(timezone.utc).isoformat(),
             "note": (
                 "MIL architecture with Gated Attention, MC-Dropout uncertainty "
-                "estimation, and 3-tier clinical triage routing."
+                "estimation, probability-zone safety net, and 3-tier clinical "
+                "triage routing. Two independent signals trigger the uncertain "
+                "tier: (a) MC-Dropout variance, (b) ambiguous probability zone."
             ),
         },
         "slides": [],
@@ -639,6 +671,7 @@ def export_results(
             "malignancy_probability": round(r["mean_prob"], 6),
             "uncertainty_score": round(r["std_prob"], 6),
             "tier": r["tier"],
+            "triage_reason": r.get("triage_reason", ""),
             "num_patches": r["num_patches"],
             "patch_coordinates": r["coordinates"],
             "patch_attention_weights": [
@@ -673,12 +706,13 @@ def print_triage_summary(results: list[dict]):
     tier_counts = {"urgent": 0, "routine": 0, "uncertain": 0}
     tier_correct = {"urgent": 0, "routine": 0, "uncertain": 0}
 
-    print("\n" + "=" * 80)
-    print(f"{'SLIDE ID':<14} {'TRUE':>5} {'PROB':>8} {'UNCERT':>8} {'TIER':<12} {'OK':>3}")
-    print("-" * 80)
+    print("\n" + "=" * 95)
+    print(f"{'SLIDE ID':<14} {'TRUE':>5} {'PROB':>8} {'UNCERT':>8} {'TIER':<12} {'OK':>3}  {'REASON'}")
+    print("-" * 95)
 
     for r in results:
         tier = r["tier"]
+        reason = r.get("triage_reason", "")
         tier_counts[tier] += 1
 
         # Check if triage aligns with ground truth
@@ -693,21 +727,29 @@ def print_triage_summary(results: list[dict]):
             correct = "?"
             tier_correct[tier] += 1
 
+        # Shorten reason for table display
+        short_reason = ""
+        if "MC-Dropout" in reason:
+            short_reason = "[variance]"
+        elif "ambiguous zone" in reason:
+            short_reason = "[prob-zone]"
+
         print(
             f"  {r['slide_id']:<12} "
             f"{r['true_label']:>5} "
             f"{r['mean_prob']:>8.4f} "
             f"{r['std_prob']:>8.4f} "
             f"{tier:<12} "
-            f"{correct:>3}"
+            f"{correct:>3}  "
+            f"{short_reason}"
         )
 
-    print("-" * 80)
+    print("-" * 95)
     print("TRIAGE DISTRIBUTION:")
     for tier, count in tier_counts.items():
         marker = {"urgent": "[!]", "routine": "[+]", "uncertain": "[?]"}[tier]
         print(f"  {marker} {tier.upper():<12}: {count:>3} slides")
-    print("=" * 80)
+    print("=" * 95)
 
 
 def run_pipeline_experiment(mode: str = "camelyon16"):

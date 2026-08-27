@@ -1,0 +1,883 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MC-Dropout Uncertainty Diagnostic Report — CAMELYON16</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #090d16;
+      --card-bg: rgba(18, 26, 43, 0.75);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --text-main: #f1f5f9;
+      --text-muted: #94a3b8;
+      --text-subtle: #64748b;
+      --accent-cyan: #06b6d4;
+      --accent-blue: #3b82f6;
+      --accent-purple: #8b5cf6;
+      --accent-rose: #f43f5e;
+      --accent-emerald: #10b981;
+      --accent-amber: #f59e0b;
+      --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text-main);
+      font-family: var(--font-sans);
+      line-height: 1.6;
+      padding: 40px 20px;
+      min-height: 100vh;
+      background-image: 
+        radial-gradient(circle at 10% 10%, rgba(59, 130, 246, 0.08) 0%, transparent 40%),
+        radial-gradient(circle at 90% 80%, rgba(6, 182, 212, 0.06) 0%, transparent 40%);
+    }
+
+    .container {
+      max-width: 1080px;
+      margin: 0 auto;
+    }
+
+    /* Header */
+    header {
+      border-bottom: 1px solid var(--card-border);
+      padding-bottom: 28px;
+      margin-bottom: 36px;
+      position: relative;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border-radius: 9999px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      font-family: var(--font-mono);
+      background: rgba(6, 182, 212, 0.12);
+      color: var(--accent-cyan);
+      border: 1px solid rgba(6, 182, 212, 0.3);
+      margin-bottom: 14px;
+    }
+
+    .badge-pulse {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--accent-cyan);
+      box-shadow: 0 0 8px var(--accent-cyan);
+    }
+
+    h1 {
+      font-size: 32px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      background: linear-gradient(135deg, #ffffff 0%, #cbd5e1 60%, #94a3b8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 10px;
+    }
+
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 18px;
+      font-size: 13px;
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+    }
+
+    .meta span {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* Executive Callout */
+    .callout {
+      border-radius: 12px;
+      padding: 20px 24px;
+      margin-bottom: 36px;
+      position: relative;
+      overflow: hidden;
+      backdrop-filter: blur(12px);
+    }
+
+    .callout-critical {
+      background: linear-gradient(145deg, rgba(244, 63, 94, 0.12), rgba(18, 26, 43, 0.8));
+      border: 1px solid rgba(244, 63, 94, 0.3);
+      border-left: 4px solid var(--accent-rose);
+    }
+
+    .callout-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 700;
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 8px;
+    }
+
+    .callout-critical .callout-title {
+      color: var(--accent-rose);
+    }
+
+    .callout p {
+      font-size: 14px;
+      color: #e2e8f0;
+      line-height: 1.6;
+    }
+
+    /* Section Cards */
+    .section-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 14px;
+      padding: 28px;
+      margin-bottom: 32px;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+    }
+
+    h2 {
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 20px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      padding-bottom: 12px;
+    }
+
+    h2 .section-num {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      color: var(--accent-cyan);
+      background: rgba(6, 182, 212, 0.1);
+      padding: 3px 8px;
+      border-radius: 6px;
+      border: 1px solid rgba(6, 182, 212, 0.2);
+    }
+
+    /* Stat Grids */
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .stat-card {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 10px;
+      padding: 16px;
+    }
+
+    .stat-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-subtle);
+      font-family: var(--font-mono);
+      margin-bottom: 6px;
+    }
+
+    .stat-value {
+      font-size: 22px;
+      font-weight: 800;
+      color: #ffffff;
+      font-family: var(--font-mono);
+    }
+
+    .stat-desc {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    /* Tables */
+    .table-container {
+      overflow-x: auto;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      margin: 18px 0;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      text-align: left;
+    }
+
+    th {
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--text-muted);
+      font-weight: 600;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 12px 14px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      white-space: nowrap;
+    }
+
+    td {
+      padding: 10px 14px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      color: #cbd5e1;
+      font-family: var(--font-sans);
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    tr:hover td {
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .mono {
+      font-family: var(--font-mono);
+    }
+
+    .text-right {
+      text-align: right;
+    }
+
+    .text-center {
+      text-align: center;
+    }
+
+    /* Tiers & Status Pills */
+    .pill {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      font-family: var(--font-mono);
+      text-transform: uppercase;
+    }
+
+    .pill-urgent {
+      background: rgba(244, 63, 94, 0.15);
+      color: var(--accent-rose);
+      border: 1px solid rgba(244, 63, 94, 0.3);
+    }
+
+    .pill-routine {
+      background: rgba(16, 185, 129, 0.15);
+      color: var(--accent-emerald);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+
+    .pill-uncertain {
+      background: rgba(245, 158, 11, 0.15);
+      color: var(--accent-amber);
+      border: 1px solid rgba(245, 158, 11, 0.3);
+    }
+
+    .miss-row {
+      background: rgba(244, 63, 94, 0.08) !important;
+    }
+
+    .miss-row td {
+      color: #fff;
+    }
+
+    .highlight-cell {
+      color: var(--accent-cyan);
+      font-weight: 700;
+    }
+
+    /* Option Cards */
+    .option-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-top: 20px;
+    }
+
+    @media (max-width: 768px) {
+      .option-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .option-card {
+      border-radius: 12px;
+      padding: 24px;
+      border: 1px solid var(--card-border);
+      background: rgba(255, 255, 255, 0.02);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .option-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+    }
+
+    .option-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .option-tag {
+      font-size: 10px;
+      font-family: var(--font-mono);
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 4px;
+      text-transform: uppercase;
+    }
+
+    .tag-empirical {
+      background: rgba(6, 182, 212, 0.15);
+      color: var(--accent-cyan);
+      border: 1px solid rgba(6, 182, 212, 0.3);
+    }
+
+    .tag-architectural {
+      background: rgba(139, 92, 246, 0.15);
+      color: var(--accent-purple);
+      border: 1px solid rgba(139, 92, 246, 0.3);
+    }
+
+    .option-body {
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.6;
+      margin-bottom: 16px;
+    }
+
+    .option-body strong {
+      color: #f1f5f9;
+    }
+
+    .option-list {
+      list-style: none;
+      margin-top: 10px;
+    }
+
+    .option-list li {
+      position: relative;
+      padding-left: 16px;
+      margin-bottom: 6px;
+    }
+
+    .option-list li::before {
+      content: "•";
+      position: absolute;
+      left: 0;
+      color: var(--accent-cyan);
+    }
+
+    footer {
+      text-align: center;
+      font-size: 12px;
+      color: var(--text-subtle);
+      font-family: var(--font-mono);
+      margin-top: 40px;
+      padding-top: 20px;
+      border-top: 1px solid var(--card-border);
+    }
+
+    /* Print styling */
+    @media print {
+      body {
+        background: #ffffff;
+        color: #0f172a;
+        padding: 0;
+      }
+      .section-card, .callout {
+        background: #ffffff !important;
+        border: 1px solid #cbd5e1 !important;
+        box-shadow: none !important;
+      }
+      th {
+        background: #f1f5f9 !important;
+        color: #334155 !important;
+      }
+      td {
+        color: #0f172a !important;
+      }
+      h1, h2, .stat-value {
+        color: #0f172a !important;
+        -webkit-text-fill-color: initial !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    
+    <!-- Header -->
+    <header>
+      <div class="badge">
+        <div class="badge-pulse"></div>
+        Diagnostic Audit Report
+      </div>
+      <h1>MC-Dropout Uncertainty Distribution Analysis</h1>
+      <div class="meta">
+        <span><strong>Target:</strong> Real CAMELYON16 (20 Slides) vs. Synthetic Benchmark (50 Slides)</span>
+        <span><strong>Script:</strong> <code>scratch/uncertainty_diagnostic.py</code></span>
+        <span><strong>Status:</strong> Read-Only Analysis (0 Changes Applied)</span>
+      </div>
+    </header>
+
+    <!-- Executive Summary Box -->
+    <div class="callout callout-critical">
+      <div class="callout-title">
+        <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+        Core Diagnostic Finding
+      </div>
+      <p>
+        The production uncertainty threshold <strong>(UNCERTAINTY_THRESHOLD = 0.15) is completely inert on real histology data</strong>. The entire 20-slide real CAMELYON16 cohort has uncertainty values strictly under <strong>0.0866</strong>. The model is <em>confidently wrong</em> on held-out test micrometastases (<code>tumor_007</code> at 0.0457, <code>tumor_010</code> at 0.0586).
+      </p>
+    </div>
+
+    <!-- Step 1: Real vs Synthetic Statistics -->
+    <div class="section-card">
+      <h2><span class="section-num">STEP 1</span> Comparative Uncertainty Metrics (Real vs Synthetic)</h2>
+      
+      <div class="stat-grid">
+        <div class="stat-card">
+          <div class="stat-label">Real Data Max Std</div>
+          <div class="stat-value" style="color: var(--accent-rose);">0.0866</div>
+          <div class="stat-desc">Far below 0.15 threshold</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Synthetic Data Max Std</div>
+          <div class="stat-value" style="color: var(--accent-cyan);">0.2867</div>
+          <div class="stat-desc">3.31x wider distribution</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Real Correlation (r)</div>
+          <div class="stat-value" style="color: var(--accent-amber);">-0.358</div>
+          <div class="stat-desc">p = 0.1216 (Not Statistically Sig)</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Synthetic Correlation (r)</div>
+          <div class="stat-value" style="color: var(--accent-emerald);">-0.403</div>
+          <div class="stat-desc">p = 0.0037 (Statistically Sig)</div>
+        </div>
+      </div>
+
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Metric</th>
+              <th class="text-right">Real CAMELYON16 (N=20)</th>
+              <th class="text-right">Synthetic Test (N=50)</th>
+              <th class="text-right">Spread Ratio (Syn / Real)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Minimum Std</strong></td>
+              <td class="text-right mono">0.000924</td>
+              <td class="text-right mono">0.000000</td>
+              <td class="text-right mono">0.00x</td>
+            </tr>
+            <tr>
+              <td><strong>Maximum Std</strong></td>
+              <td class="text-right mono highlight-cell">0.086568</td>
+              <td class="text-right mono">0.286653</td>
+              <td class="text-right mono highlight-cell">3.31x</td>
+            </tr>
+            <tr>
+              <td><strong>Mean Std</strong></td>
+              <td class="text-right mono">0.029338</td>
+              <td class="text-right mono">0.039520</td>
+              <td class="text-right mono">1.35x</td>
+            </tr>
+            <tr>
+              <td><strong>Median Std</strong></td>
+              <td class="text-right mono">0.030514</td>
+              <td class="text-right mono">0.000727</td>
+              <td class="text-right mono">0.02x</td>
+            </tr>
+            <tr>
+              <td><strong>Standard Deviation (Spread)</strong></td>
+              <td class="text-right mono">0.023901</td>
+              <td class="text-right mono">0.079444</td>
+              <td class="text-right mono">3.32x</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Step 1A: Full 20 Real Slides Breakdown -->
+    <div class="section-card">
+      <h2><span class="section-num">STEP 1A</span> Full Real CAMELYON16 Distribution (Ranked by Uncertainty)</h2>
+      <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;">
+        Sorted ascending by MC-Dropout uncertainty (std_prob). Rows highlighted in red are misclassified slides.
+      </p>
+
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th class="text-center">#</th>
+              <th>Slide ID</th>
+              <th>Split</th>
+              <th class="text-center">True</th>
+              <th class="text-right">Mean Prob</th>
+              <th class="text-right">Uncertainty (Std)</th>
+              <th class="text-center">Assigned Tier</th>
+              <th class="text-center">Correct @ 0.5</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="text-center mono">1</td>
+              <td class="mono">normal_004</td>
+              <td>train</td>
+              <td class="text-center mono">0</td>
+              <td class="text-right mono">0.000457</td>
+              <td class="text-right mono">0.000924</td>
+              <td class="text-center"><span class="pill pill-routine">routine</span></td>
+              <td class="text-center">✅</td>
+            </tr>
+            <tr>
+              <td class="text-center mono">2</td>
+              <td class="mono">normal_008</td>
+              <td>train</td>
+              <td class="text-center mono">0</td>
+              <td class="text-right mono">0.002252</td>
+              <td class="text-right mono">0.002737</td>
+              <td class="text-center"><span class="pill pill-routine">routine</span></td>
+              <td class="text-center">✅</td>
+            </tr>
+            <tr>
+              <td class="text-center mono">3</td>
+              <td class="mono">normal_007</td>
+              <td>train</td>
+              <td class="text-center mono">0</td>
+              <td class="text-right mono">0.002488</td>
+              <td class="text-right mono">0.002782</td>
+              <td class="text-center"><span class="pill pill-routine">routine</span></td>
+              <td class="text-center">✅</td>
+            </tr>
+            <tr>
+              <td class="text-center mono">4</td>
+              <td class="mono">normal_003</td>
+              <td>train</td>
+              <td class="text-center mono">0</td>
+              <td class="text-right mono">0.006510</td>
+              <td class="text-right mono">0.003196</td>
+              <td class="text-center"><span class="pill pill-routine">routine</span></td>
+              <td class="text-center">✅</td>
+            </tr>
+            <tr>
+              <td class="text-center mono">5</td>
+              <td class="mono">tumor_009</td>
+              <td>train</td>
+              <td class="text-center mono">1</td>
+              <td class="text-right mono">0.988915</td>
+              <td class="text-right mono">0.006185</td>
+              <td class="text-center"><span class="pill pill-urgent">urgent</span></td>
+              <td class="text-center">✅</td>
+            </tr>
+            <tr>
+              <td class="text-center mono">6</td>
+              <td class="mono">normal_006</td>
+              <td>train</td>
+              <td class="text-center mono">0</td>
+              <td class="text-right mono">0.007145</td>
+              <td class="text-right mono">0.006670</td>
+              <td class="text-center"><span class="pill pill-routine">routine</span></td>
+              <td class="text-center">✅</td>
+            </tr>
+            <tr>
+              <td class="text-center mono">7</td>
+              <td class="mono">tumor_002</td>
+              <td>train</td>
+              <td class="text-center mono">1</td>
+              <td class="text-right mono">0.973917</td>
+              <td class="text-right mono">0.010514</td>
+              <td class="text-center"><span class="pill pill-urgent">urgent</span></td>
+              <td class="text-center">✅</td>
+            </tr>
+            <tr>
+              <td class="text-center mono">8</td>
+              <td class="mono">normal_002</td>
+              <td><strong>test</strong></td>
+              <td class="text-center mono">0</td>
+              <td class="text-right mono">0.025900</td>
+              <td class="text-right mono">0.011481</td>
+              <td class="text-center"><span class="pill pill-routine">routine</span></td>
+              <td class="text-center">✅</td>
+            </tr>
+            <tr>
+              <td class="text-center mono">9</td>
+              <td class="mono">tumor_004</td>
+              <td>train</td>
+              <td class="text-center mono">1</td>
+              <td class="text-right mono">0.961242</td>
+              <td class="text-right mono">0.016926</td>
+              <td class="text-center"><span class="pill pill-urgent">urgent</span></td>
+              <td class="text-center">✅</td>
+            </tr>
+            <tr>
+              <td class="text-center mono">10</td>
+              <td class="mono">tumor_001</td>
+              <td>val</td>
+              <td class="text-center mono">1</td>
+              <td class="text-right mono">0.898204</td>
+              <td class="text-right mono">0.029935</td>
+              <td class="text-center"><span class="pill pill-urgent">urgent</span></td>
+              <td class="text-center">✅</td>
+            </tr>
+            <tr>
+              <td class="text-center mono">11</td>
+              <td class="mono">tumor_003</td>
+              <td>train</td>
+              <td class="text-center mono">1</td>
+              <td class="text-right mono">0.916080</td>
+              <td class="text-right mono">0.031092</td>
+              <td class="text-center"><span class="pill pill-urgent">urgent</span></td>
+              <td class="text-center">✅</td>
+            </tr>
+            <tr>
+              <td class="text-center mono">12</td>
+              <td class="mono">tumor_005</td>
+              <td>train</td>
+              <td class="text-center mono">1</td>
+              <td class="text-right mono">0.884431</td>
+              <td class="text-right mono">0.031785</td>
+              <td class="text-center"><span class="pill pill-urgent">urgent</span></td>
+              <td class="text-center">✅</td>
+            </tr>
+            <tr>
+              <td class="text-center mono">13</td>
+              <td class="mono">normal_009</td>
+              <td>train</td>
+              <td class="text-center mono">0</td>
+              <td class="text-right mono">0.099609</td>
+              <td class="text-right mono">0.038907</td>
+              <td class="text-center"><span class="pill pill-routine">routine</span></td>
+              <td class="text-center">✅</td>
+            </tr>
+            <tr>
+              <td class="text-center mono">14</td>
+              <td class="mono">tumor_006</td>
+              <td>train</td>
+              <td class="text-center mono">1</td>
+              <td class="text-right mono">0.791692</td>
+              <td class="text-right mono">0.039343</td>
+              <td class="text-center"><span class="pill pill-urgent">urgent</span></td>
+              <td class="text-center">✅</td>
+            </tr>
+            <tr class="miss-row">
+              <td class="text-center mono">15</td>
+              <td class="mono"><strong>normal_010</strong></td>
+              <td>val</td>
+              <td class="text-center mono">0</td>
+              <td class="text-right mono">0.853292</td>
+              <td class="text-right mono">0.044758</td>
+              <td class="text-center"><span class="pill pill-urgent">urgent</span></td>
+              <td class="text-center">❌ (FP)</td>
+            </tr>
+            <tr class="miss-row">
+              <td class="text-center mono">16</td>
+              <td class="mono"><strong>tumor_007</strong></td>
+              <td><strong>test</strong></td>
+              <td class="text-center mono">1</td>
+              <td class="text-right mono">0.434290</td>
+              <td class="text-right mono">0.045686</td>
+              <td class="text-center"><span class="pill pill-routine">routine</span></td>
+              <td class="text-center">❌ (FN Silent Miss)</td>
+            </tr>
+            <tr>
+              <td class="text-center mono">17</td>
+              <td class="mono">tumor_008</td>
+              <td>val</td>
+              <td class="text-center mono">1</td>
+              <td class="text-right mono">0.523187</td>
+              <td class="text-right mono">0.057480</td>
+              <td class="text-center"><span class="pill pill-routine">routine</span></td>
+              <td class="text-center">✅</td>
+            </tr>
+            <tr class="miss-row">
+              <td class="text-center mono">18</td>
+              <td class="mono"><strong>tumor_010</strong></td>
+              <td><strong>test</strong></td>
+              <td class="text-center mono">1</td>
+              <td class="text-right mono">0.240523</td>
+              <td class="text-right mono">0.058618</td>
+              <td class="text-center"><span class="pill pill-routine">routine</span></td>
+              <td class="text-center">❌ (FN Silent Miss)</td>
+            </tr>
+            <tr>
+              <td class="text-center mono">19</td>
+              <td class="mono">normal_001</td>
+              <td><strong>test</strong></td>
+              <td class="text-center mono">0</td>
+              <td class="text-right mono">0.350523</td>
+              <td class="text-right mono">0.061173</td>
+              <td class="text-center"><span class="pill pill-routine">routine</span></td>
+              <td class="text-center">✅</td>
+            </tr>
+            <tr>
+              <td class="text-center mono">20</td>
+              <td class="mono">normal_005</td>
+              <td>val</td>
+              <td class="text-center mono">0</td>
+              <td class="text-right mono">0.409221</td>
+              <td class="text-right mono">0.086568</td>
+              <td class="text-center"><span class="pill pill-routine">routine</span></td>
+              <td class="text-center">✅</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Step 2: Threshold Sweep Tradeoff Table -->
+    <div class="section-card">
+      <h2><span class="section-num">STEP 2</span> Threshold Sweep & Safety Tradeoff Curve</h2>
+      <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;">
+        Evaluating the exact trade-off if we lower <code>UNCERTAINTY_THRESHOLD</code> to catch the 2 test misses (<code>tumor_007</code> @ 0.0457, <code>tumor_010</code> @ 0.0586):
+      </p>
+
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Threshold</th>
+              <th class="text-center">Test Misses Caught</th>
+              <th class="text-center">False Uncertain Flags</th>
+              <th class="text-center">Total Flagged / 20</th>
+              <th>Flagged Slide Cohort</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="mono">0.1500 (Prod)</td>
+              <td class="text-center mono" style="color: var(--accent-rose);">0 / 2</td>
+              <td class="text-center mono">0</td>
+              <td class="text-center mono">0 / 20 (0%)</td>
+              <td><em>None (Inert)</em></td>
+            </tr>
+            <tr>
+              <td class="mono">0.0600</td>
+              <td class="text-center mono" style="color: var(--accent-rose);">0 / 2</td>
+              <td class="text-center mono">2</td>
+              <td class="text-center mono">2 / 20 (10%)</td>
+              <td class="mono" style="font-size: 11px;">normal_005, normal_001</td>
+            </tr>
+            <tr>
+              <td class="mono">0.0500</td>
+              <td class="text-center mono" style="color: var(--accent-amber);">1 / 2</td>
+              <td class="text-center mono">3</td>
+              <td class="text-center mono">4 / 20 (20%)</td>
+              <td class="mono" style="font-size: 11px;">normal_005, tumor_008, normal_001, <strong>tumor_010</strong></td>
+            </tr>
+            <tr style="background: rgba(6, 182, 212, 0.08);">
+              <td class="mono highlight-cell">0.0450 (Option A)</td>
+              <td class="text-center mono" style="color: var(--accent-emerald); font-weight: 700;">2 / 2 (100%)</td>
+              <td class="text-center mono">3</td>
+              <td class="text-center mono highlight-cell">5 / 20 (25%)</td>
+              <td class="mono" style="font-size: 11px;">normal_005, tumor_008, <strong>tumor_007</strong>, normal_001, <strong>tumor_010</strong></td>
+            </tr>
+            <tr>
+              <td class="mono">0.0400</td>
+              <td class="text-center mono" style="color: var(--accent-emerald);">2 / 2 (100%)</td>
+              <td class="text-center mono">4</td>
+              <td class="text-center mono">6 / 20 (30%)</td>
+              <td class="mono" style="font-size: 11px;">normal_010, normal_005, tumor_008, tumor_007, normal_001, tumor_010</td>
+            </tr>
+            <tr>
+              <td class="mono">0.0200</td>
+              <td class="text-center mono" style="color: var(--accent-emerald);">2 / 2 (100%)</td>
+              <td class="text-center mono">9</td>
+              <td class="text-center mono">11 / 20 (55%)</td>
+              <td class="mono" style="font-size: 11px;">Over half the dataset flagged</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Step 3: Proposed Options -->
+    <div class="section-card">
+      <h2><span class="section-num">STEP 3</span> Proposed Strategic Options</h2>
+      
+      <div class="option-grid">
+        <!-- Option A -->
+        <div class="option-card">
+          <div>
+            <div class="option-header">
+              <div class="option-title">Option A: Empirical Threshold</div>
+              <span class="option-tag tag-empirical">Fast Calibration</span>
+            </div>
+            <div class="option-body">
+              Set <code>UNCERTAINTY_THRESHOLD = 0.045</code> in pipeline routing.
+              <ul class="option-list">
+                <li><strong>Pro:</strong> Catches 100% of test misses (<code>tumor_007</code>, <code>tumor_010</code>) by routing them to Uncertain.</li>
+                <li><strong>Tradeoff:</strong> 60% false-flag rate (3 of 5 flagged slides are correct).</li>
+                <li><strong>Downside:</strong> Directly overfits to N=2 test points on an N=20 dataset.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- Option B -->
+        <div class="option-card">
+          <div>
+            <div class="option-header">
+              <div class="option-title">Option B: Probability-Zone Triage</div>
+              <span class="option-tag tag-architectural">Architectural Fix</span>
+            </div>
+            <div class="option-body">
+              Acknowledge MC-Dropout is uninformative at N=20. Route slides with probabilities in the ambiguous zone (e.g. <code>0.20 &lt; prob &lt; 0.70</code>) to Pathologist Review.
+              <ul class="option-list">
+                <li><strong>Pro:</strong> More honest mathematically; does not rely on weak dropout noise.</li>
+                <li><strong>Pro:</strong> Directly captures boundary micrometastases where feature attention is low.</li>
+                <li><strong>Next Step:</strong> Requires 30–50+ real slides or 5-model deep ensemble for true uncertainty.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <footer>
+      Diagnostic executed via <code>pipeline.py</code> & <code>uncertainty_diagnostic.py</code> · CAMELYON16 Real Feature Extraction Benchmark
+    </footer>
+
+  </div>
+
+</body>
+</html>

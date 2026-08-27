@@ -1,0 +1,205 @@
+{
+  "real_camelyon16_held_out_test": {
+    "n_samples": 4,
+    "slides": [
+      "tumor_007",
+      "normal_001",
+      "tumor_010",
+      "normal_002"
+    ],
+    "n_bins": 4,
+    "auc": 0.75,
+    "ece": 0.2312,
+    "brier_score": 0.2476,
+    "sample_size_caveat": "N=4 held-out test slides (normal_001, normal_002, tumor_007, tumor_010). AUC is exactly 0.7500. Individual bins contain 0\u20132 slides. Calibration metrics are extreme-sparsity artifacts and illustrative only.",
+    "bins": [
+      {
+        "bin_idx": 1,
+        "bin_range": "[0.00, 0.25)",
+        "count": 1,
+        "mean_confidence": 0.0243,
+        "empirical_accuracy": 0.0,
+        "calibration_gap": 0.0243
+      },
+      {
+        "bin_idx": 2,
+        "bin_range": "[0.25, 0.50)",
+        "count": 3,
+        "mean_confidence": 0.3665,
+        "empirical_accuracy": 0.6667,
+        "calibration_gap": 0.3001
+      },
+      {
+        "bin_idx": 3,
+        "bin_range": "[0.50, 0.75)",
+        "count": 0,
+        "mean_confidence": null,
+        "empirical_accuracy": null,
+        "calibration_gap": null
+      },
+      {
+        "bin_idx": 4,
+        "bin_range": "[0.75, 1.00)",
+        "count": 0,
+        "mean_confidence": null,
+        "empirical_accuracy": null,
+        "calibration_gap": null
+      }
+    ]
+  },
+  "real_camelyon16_all_combined": {
+    "n_samples": 20,
+    "n_bins": 5,
+    "auc": 0.94,
+    "ece": 0.0947,
+    "brier_score": 0.1089,
+    "sample_size_caveat": "N=20 combined (12 train + 4 val + 4 test). Includes training slides seen by model, yielding an inflated apparent AUC of 0.9400.",
+    "bins": [
+      {
+        "bin_idx": 1,
+        "bin_range": "[0.00, 0.20)",
+        "count": 7,
+        "mean_confidence": 0.0188,
+        "empirical_accuracy": 0.0,
+        "calibration_gap": 0.0188
+      },
+      {
+        "bin_idx": 2,
+        "bin_range": "[0.20, 0.40)",
+        "count": 3,
+        "mean_confidence": 0.3406,
+        "empirical_accuracy": 0.3333,
+        "calibration_gap": 0.0073
+      },
+      {
+        "bin_idx": 3,
+        "bin_range": "[0.40, 0.60)",
+        "count": 2,
+        "mean_confidence": 0.4891,
+        "empirical_accuracy": 1.0,
+        "calibration_gap": 0.5109
+      },
+      {
+        "bin_idx": 4,
+        "bin_range": "[0.60, 0.80)",
+        "count": 1,
+        "mean_confidence": 0.7979,
+        "empirical_accuracy": 1.0,
+        "calibration_gap": 0.2021
+      },
+      {
+        "bin_idx": 5,
+        "bin_range": "[0.80, 1.00)",
+        "count": 7,
+        "mean_confidence": 0.9308,
+        "empirical_accuracy": 0.8571,
+        "calibration_gap": 0.0737
+      }
+    ]
+  },
+  "synthetic_benchmark": {
+    "n_samples": 50,
+    "n_bins": 10,
+    "auc": 0.8637,
+    "ece_raw": 0.1654,
+    "brier_raw": 0.1558,
+    "bins": [
+      {
+        "bin_idx": 1,
+        "bin_range": "[0.00, 0.10)",
+        "count": 23,
+        "mean_confidence": 0.0059,
+        "empirical_accuracy": 0.1304,
+        "calibration_gap": 0.1245
+      },
+      {
+        "bin_idx": 2,
+        "bin_range": "[0.10, 0.20)",
+        "count": 1,
+        "mean_confidence": 0.1157,
+        "empirical_accuracy": 0.0,
+        "calibration_gap": 0.1157
+      },
+      {
+        "bin_idx": 3,
+        "bin_range": "[0.20, 0.30)",
+        "count": 3,
+        "mean_confidence": 0.2491,
+        "empirical_accuracy": 0.3333,
+        "calibration_gap": 0.0842
+      },
+      {
+        "bin_idx": 4,
+        "bin_range": "[0.30, 0.40)",
+        "count": 1,
+        "mean_confidence": 0.3378,
+        "empirical_accuracy": 0.0,
+        "calibration_gap": 0.3378
+      },
+      {
+        "bin_idx": 5,
+        "bin_range": "[0.40, 0.50)",
+        "count": 1,
+        "mean_confidence": 0.4768,
+        "empirical_accuracy": 1.0,
+        "calibration_gap": 0.5232
+      },
+      {
+        "bin_idx": 6,
+        "bin_range": "[0.50, 0.60)",
+        "count": 1,
+        "mean_confidence": 0.5687,
+        "empirical_accuracy": 0.0,
+        "calibration_gap": 0.5687
+      },
+      {
+        "bin_idx": 7,
+        "bin_range": "[0.60, 0.70)",
+        "count": 0,
+        "mean_confidence": null,
+        "empirical_accuracy": null,
+        "calibration_gap": null
+      },
+      {
+        "bin_idx": 8,
+        "bin_range": "[0.70, 0.80)",
+        "count": 1,
+        "mean_confidence": 0.7049,
+        "empirical_accuracy": 0.0,
+        "calibration_gap": 0.7049
+      },
+      {
+        "bin_idx": 9,
+        "bin_range": "[0.80, 0.90)",
+        "count": 0,
+        "mean_confidence": null,
+        "empirical_accuracy": null,
+        "calibration_gap": null
+      },
+      {
+        "bin_idx": 10,
+        "bin_range": "[0.90, 1.00)",
+        "count": 19,
+        "mean_confidence": 0.9949,
+        "empirical_accuracy": 0.8421,
+        "calibration_gap": 0.1528
+      }
+    ]
+  },
+  "synthetic_temperature_scaling": {
+    "optimal_temperature_T": 1.0,
+    "validation_fit_size": 100,
+    "test_eval_size": 50,
+    "ece_before": 0.1472,
+    "ece_after": 0.1472,
+    "ece_relative_improvement_pct": 0.0,
+    "brier_before": 0.1494,
+    "brier_after": 0.1494,
+    "brier_relative_improvement_pct": 0.0,
+    "auc": 0.8654
+  },
+  "real_data_temp_scaling_decision": {
+    "skipped": true,
+    "reason": "Skipped on real CAMELYON16. Fitting a temperature parameter on 4 validation slides would introduce parameter estimation variance and direct overfitting. Requires at least N >= 30-50 validation slides."
+  }
+}

@@ -8,10 +8,12 @@
     "triage_thresholds": {
       "urgent_prob": 0.7,
       "routine_prob": 0.3,
-      "uncertain_std": 0.15
+      "uncertain_std": 0.15,
+      "prob_zone_low": 0.2,
+      "prob_zone_high": 0.7
     },
-    "generated_at": "2026-08-22T07:49:50.045742+00:00",
-    "note": "MIL architecture with Gated Attention, MC-Dropout uncertainty estimation, and 3-tier clinical triage routing."
+    "generated_at": "2026-08-27T03:56:18.037658+00:00",
+    "note": "MIL architecture with Gated Attention, MC-Dropout uncertainty estimation, probability-zone safety net, and 3-tier clinical triage routing. Two independent signals trigger the uncertain tier: (a) MC-Dropout variance, (b) ambiguous probability zone."
   },
   "slides": [
     {
@@ -19,7 +21,8 @@
       "true_label": 1,
       "malignancy_probability": 0.447553,
       "uncertainty_score": 0.066508,
-      "tier": "routine",
+      "tier": "uncertain",
+      "triage_reason": "Probability (0.4476) in ambiguous zone (0.2\u20130.7)",
       "num_patches": 400,
       "patch_coordinates": [
         [
@@ -2031,7 +2034,8 @@
       "true_label": 0,
       "malignancy_probability": 0.384554,
       "uncertainty_score": 0.088962,
-      "tier": "routine",
+      "tier": "uncertain",
+      "triage_reason": "Probability (0.3846) in ambiguous zone (0.2\u20130.7)",
       "num_patches": 400,
       "patch_coordinates": [
         [
@@ -4043,7 +4047,8 @@
       "true_label": 1,
       "malignancy_probability": 0.26748,
       "uncertainty_score": 0.058567,
-      "tier": "routine",
+      "tier": "uncertain",
+      "triage_reason": "Probability (0.2675) in ambiguous zone (0.2\u20130.7)",
       "num_patches": 400,
       "patch_coordinates": [
         [
@@ -6056,6 +6061,7 @@
       "malignancy_probability": 0.024322,
       "uncertainty_score": 0.01545,
       "tier": "routine",
+      "triage_reason": "Probability (0.0243) <= routine threshold (0.3)",
       "num_patches": 400,
       "patch_coordinates": [
         [
@@ -8068,6 +8074,7 @@
       "malignancy_probability": 0.909123,
       "uncertainty_score": 0.029073,
       "tier": "urgent",
+      "triage_reason": "Probability (0.9091) > urgent threshold (0.7)",
       "num_patches": 400,
       "patch_coordinates": [
         [
@@ -10080,6 +10087,7 @@
       "malignancy_probability": 0.868146,
       "uncertainty_score": 0.048118,
       "tier": "urgent",
+      "triage_reason": "Probability (0.8681) > urgent threshold (0.7)",
       "num_patches": 400,
       "patch_coordinates": [
         [
@@ -12091,7 +12099,8 @@
       "true_label": 0,
       "malignancy_probability": 0.369775,
       "uncertainty_score": 0.049537,
-      "tier": "routine",
+      "tier": "uncertain",
+      "triage_reason": "Probability (0.3698) in ambiguous zone (0.2\u20130.7)",
       "num_patches": 400,
       "patch_coordinates": [
         [
@@ -14103,7 +14112,8 @@
       "true_label": 1,
       "malignancy_probability": 0.530557,
       "uncertainty_score": 0.063911,
-      "tier": "routine",
+      "tier": "uncertain",
+      "triage_reason": "Probability (0.5306) in ambiguous zone (0.2\u20130.7)",
       "num_patches": 400,
       "patch_coordinates": [
         [
@@ -16116,6 +16126,7 @@
       "malignancy_probability": 0.002153,
       "uncertainty_score": 0.002188,
       "tier": "routine",
+      "triage_reason": "Probability (0.0022) <= routine threshold (0.3)",
       "num_patches": 400,
       "patch_coordinates": [
         [
@@ -18128,6 +18139,7 @@
       "malignancy_probability": 0.000541,
       "uncertainty_score": 0.00054,
       "tier": "routine",
+      "triage_reason": "Probability (0.0005) <= routine threshold (0.3)",
       "num_patches": 400,
       "patch_coordinates": [
         [
@@ -20140,6 +20152,7 @@
       "malignancy_probability": 0.887415,
       "uncertainty_score": 0.025649,
       "tier": "urgent",
+      "triage_reason": "Probability (0.8874) > urgent threshold (0.7)",
       "num_patches": 400,
       "patch_coordinates": [
         [
@@ -22152,6 +22165,7 @@
       "malignancy_probability": 0.00313,
       "uncertainty_score": 0.003047,
       "tier": "routine",
+      "triage_reason": "Probability (0.0031) <= routine threshold (0.3)",
       "num_patches": 400,
       "patch_coordinates": [
         [
@@ -24164,6 +24178,7 @@
       "malignancy_probability": 0.007192,
       "uncertainty_score": 0.004582,
       "tier": "routine",
+      "triage_reason": "Probability (0.0072) <= routine threshold (0.3)",
       "num_patches": 400,
       "patch_coordinates": [
         [
@@ -26176,6 +26191,7 @@
       "malignancy_probability": 0.005398,
       "uncertainty_score": 0.002766,
       "tier": "routine",
+      "triage_reason": "Probability (0.0054) <= routine threshold (0.3)",
       "num_patches": 400,
       "patch_coordinates": [
         [
@@ -28188,6 +28204,7 @@
       "malignancy_probability": 0.797915,
       "uncertainty_score": 0.041731,
       "tier": "urgent",
+      "triage_reason": "Probability (0.7979) > urgent threshold (0.7)",
       "num_patches": 400,
       "patch_coordinates": [
         [
@@ -30200,6 +30217,7 @@
       "malignancy_probability": 0.974161,
       "uncertainty_score": 0.012727,
       "tier": "urgent",
+      "triage_reason": "Probability (0.9742) > urgent threshold (0.7)",
       "num_patches": 400,
       "patch_coordinates": [
         [
@@ -32212,6 +32230,7 @@
       "malignancy_probability": 0.965372,
       "uncertainty_score": 0.008923,
       "tier": "urgent",
+      "triage_reason": "Probability (0.9654) > urgent threshold (0.7)",
       "num_patches": 400,
       "patch_coordinates": [
         [
@@ -34224,6 +34243,7 @@
       "malignancy_probability": 0.98777,
       "uncertainty_score": 0.00659,
       "tier": "urgent",
+      "triage_reason": "Probability (0.9878) > urgent threshold (0.7)",
       "num_patches": 400,
       "patch_coordinates": [
         [
@@ -36236,6 +36256,7 @@
       "malignancy_probability": 0.089198,
       "uncertainty_score": 0.027625,
       "tier": "routine",
+      "triage_reason": "Probability (0.0892) <= routine threshold (0.3)",
       "num_patches": 400,
       "patch_coordinates": [
         [
@@ -38248,6 +38269,7 @@
       "malignancy_probability": 0.923658,
       "uncertainty_score": 0.023903,
       "tier": "urgent",
+      "triage_reason": "Probability (0.9237) > urgent threshold (0.7)",
       "num_patches": 400,
       "patch_coordinates": [
         [

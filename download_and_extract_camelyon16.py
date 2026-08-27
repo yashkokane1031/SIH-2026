@@ -33,6 +33,7 @@ BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = BASE_DIR / "data"
 TEMP_WSI_DIR = DATA_DIR / "temp_wsi"
 FEATURES_DIR = DATA_DIR / "camelyon16_features"
+THUMBNAILS_DIR = DATA_DIR / "camelyon16_thumbnails"
 REFERENCE_CSV = DATA_DIR / "camelyon16_reference.csv"
 
 PATCH_SIZE_20X = 256           # Patch resolution at 20x
@@ -315,7 +316,7 @@ def process_single_slide(
     print(f"[SLIDE] Level 0 Patch Step: {patch_lvl0_size}px (Target 20x: {PATCH_SIZE_20X}px)")
 
     # Step 3: Tissue Masking
-    tissue_mask, (scale_x, scale_y), _ = generate_tissue_mask(slide)
+    tissue_mask, (scale_x, scale_y), thumb_np = generate_tissue_mask(slide)
     mask_h, mask_w = tissue_mask.shape
 
     # Step 4: Generate Candidate Grid Coordinates
@@ -391,6 +392,18 @@ def process_single_slide(
 
     slide.close()
 
+    # Step 6b: Save Low-Res Thumbnail (reuses Otsu tissue-masking thumbnail already in memory)
+    THUMBNAILS_DIR.mkdir(parents=True, exist_ok=True)
+    thumb_path = THUMBNAILS_DIR / f"{slide_id}.jpg"
+    try:
+        thumb_img = Image.fromarray(thumb_np)
+        thumb_img.save(thumb_path, format="JPEG", quality=85, optimize=True)
+        thumb_size_kb = thumb_path.stat().st_size / 1024
+        print(f"[THUMBNAIL] Saved {thumb_path.name} ({thumb_size_kb:.1f} KB)")
+    except Exception as e:
+        thumb_size_kb = 0.0
+        print(f"[WARNING] Failed to save thumbnail for {slide_id}: {e}")
+
     # Step 7: Delete Raw WSI Immediately
     if wsi_path.exists():
         wsi_path.unlink()
@@ -421,6 +434,7 @@ def process_single_slide(
         "label": label,
         "raw_size_mb": raw_file_size_mb,
         "npz_size_kb": npz_size_kb,
+        "thumb_size_kb": thumb_size_kb,
         "num_patches": features_matrix.shape[0],
         "feature_dim": features_matrix.shape[1],
         "elapsed_s": elapsed,

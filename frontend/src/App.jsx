@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import "./App.css";
+import PathoIntro from "./components/PathoIntro";
 
 /* =========================================================
    DATA HELPERS
@@ -75,7 +76,7 @@ function heatmapColor(value) {
    NAVIGATION
 ========================================================= */
 
-function Navigation({ activePage, setActivePage }) {
+function Navigation({ activePage, setActivePage, onReplayIntro }) {
   return (
     <nav className="navbar">
       <button className="brand" onClick={() => setActivePage("dashboard")}>
@@ -87,6 +88,9 @@ function Navigation({ activePage, setActivePage }) {
         <button className={activePage === "dashboard" ? "active" : ""} onClick={() => setActivePage("dashboard")}>Overview</button>
         <button onClick={() => { setActivePage("dashboard"); setTimeout(() => document.getElementById("queue")?.scrollIntoView({ behavior: "smooth" }), 50); }}>Cases</button>
         <button onClick={() => { setActivePage("dashboard"); setTimeout(() => document.getElementById("workflow")?.scrollIntoView({ behavior: "smooth" }), 50); }}>How it works</button>
+        {onReplayIntro && (
+          <button className="intro-replay-btn" onClick={onReplayIntro} title="Replay intro animation">Intro ↺</button>
+        )}
       </div>
     </nav>
   );
@@ -630,6 +634,11 @@ function DatasetToggle({ activeDataset, setActiveDataset }) {
 ========================================================= */
 
 export default function App() {
+  const [showIntro, setShowIntro] = useState(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get("intro") === "true") return true;
+    return !sessionStorage.getItem("patho_intro_viewed");
+  });
   const [activePage, setActivePage] = useState("dashboard");
   const [selectedCase, setSelectedCase] = useState(null);
   const [filter, setFilter] = useState("ALL");
@@ -829,7 +838,20 @@ export default function App() {
 
   return (
     <div className="app">
-      <Navigation activePage={activePage} setActivePage={setActivePage} />
+      {showIntro && (
+        <PathoIntro
+          onEnter={() => {
+            setShowIntro(false);
+            sessionStorage.setItem("patho_intro_viewed", "true");
+          }}
+        />
+      )}
+
+      <Navigation
+        activePage={activePage}
+        setActivePage={setActivePage}
+        onReplayIntro={() => setShowIntro(true)}
+      />
 
       <main>
         <ClinicalHero
